@@ -60,6 +60,7 @@ hobbit_matrix
 
 #2
 (worldwide_vector<- rowSums(hobbit_matrix))
+(worldwide_vector<-apply(hobbit_matrix,1,sum))
 
 #3
 hobbit_matrix2<-cbind(hobbit_matrix,worldwide_vector);hobbit_matrix2
@@ -68,7 +69,7 @@ hobbit_matrix2<-cbind(hobbit_matrix,worldwide_vector);hobbit_matrix2
 (lord_of_the_rings_matrix<- matrix(c(474.51,552.57,310.76,338.72,380.33,468.51),
                             3,2,byrow = T, dimnames = list(c("The Felowship of the Ring",
                             "The Two Towers","The Return of the King"),c("US(in $)",
-                            "NON US (in &)"))))
+                            "NON US (in $)"))))
 
 (all_hobbit_matrix<- rbind(hobbit_matrix,lord_of_the_rings_matrix))
 #5
@@ -81,18 +82,16 @@ all_hobbit_matrix
 (us_lord_of_rings<-mean(all_hobbit_matrix[4:6,1]))
 
 #7
-(estimated_visitor<-all_hobbit_matrix/5)
+(estimated_visitor<-round(all_hobbit_matrix/5))
 
 #8
 ticket_price_matrix<-matrix(c(seq(3,8,1),seq(3,8,1)),6,2);ticket_price_matrix
 dimnames(ticket_price_matrix)<- dimnames(all_hobbit_matrix)
-ticket_price_matrix
+
+ticket_price_matrix<-ticket_price_matrix+5
 #a
-visitors<-all_hobbit_matrix/ticket_price_matrix;visitors
+visitors<-round(all_hobbit_matrix/ticket_price_matrix);visitors
 #b
-(average_us_visitor<-all_hobbit_matrix[,1]/ticket_price_matrix[,1])
+(average_us_visitor<-round(all_hobbit_matrix[,1]/ticket_price_matrix[,1]))
 #c
-(average_non_us_visitors<-all_hobbit_matrix[,2]/ticket_price_matrix[,2])
-
-
-
+(average_non_us_visitors<-round(all_hobbit_matrix[,2]/ticket_price_matrix[,2]))
