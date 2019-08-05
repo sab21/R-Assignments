@@ -1,0 +1,101 @@
+#Datatype Assignement 4th Aug 2019
+# 
+# # 1. Create two numeric values with name num1 and num2; assign values as 20.752 
+#   and 25.625 respectively.
+# # 2. Create a character value with name company and assign value as 
+#   “NIKHIL ANALYTICS”; convert first letter of both words into upper case 
+#   and rest should be lower case.
+# # 3. Find addition of num1 and num2 of question1, and store result of 
+#   addition into a new variable as integer.
+# # 4. Create two complex values with name com1 and com2, and assign 
+#   values as 5-4i and 5+4i. Find the product of com1 and com2. Can we 
+#   store result of product as integer?
+# # 5. Which function is used to find type of a variable? Can we add two 
+#     different type of variables like numeric and complex, give some examples.
+
+
+#1
+num1=20.752
+num2<-20.625
+
+is.numeric(num1)
+is.numeric(num2)
+
+#2
+company<-"NIKHIL ANALYTICS"
+is.character(company)
+paste0(substr(company,1,1),tolower(substr(company,2,6)),
+       substr(company,7,8),tolower(substr(company,9,17)))
+
+
+pos<-regexpr(pattern = " ",company)
+pos[1]
+paste0(substr(company,1,1),tolower(substr(company,2,pos[1]-1)),
+       substr(company,pos[1],8),tolower(substr(company,pos[1]+1,nchar(company))))
+
+
+#3
+(new_var<-as.integer(num1+num2))
+is.integer(new_var)
+
+#4
+comp1<-5-4i
+comp2<-5+4i
+comp3<-as.integer(comp1*comp2);comp3
+#yes we can store the resut as integer since it doesnot contain any imaginary part
+#in case of complex no it can be converted to integer by dicarding imaginary part
+
+#5
+class(comp1)
+#class() is used to know the type of datatype
+#Yes we can add two diff variable like in case of addition of complex and numeric ]
+#datatypes numeric part will be added with real part of complex no. 
+#But the data type of the result will become complex
+(d1<-comp1+num1);class(d1)
+#Similarly in case of numeric and integer addition the result will be numeric
+(d2<-new_var+num1);class(d2)
+#Logical TRUE FALSE will be converted to numeric 1 & 0 resp and the operation will be performed
+(d3<-new_var+T);class(d3)
+#Whereas addition of character data with numeric, complex integer or logical is not possible
+
+
+#LIST Assignment
+# # 1. Create a list which include 4 elements in it, 1st element is vector with 
+#   values 1 to 10, 2nd element is vector with two values “Yes” and “No”, 
+#   3rd element is vector of logical value TRUE and FALSE, 4th element is 
+#   vector of 5 numeric values (1,1,1,2,2,2).
+# # 2. Create a list which include 9 elements each elements have prime factor of 
+#   2 to 10.
+# # 3. Create a list with element name “A”,”B”,”C”. A has value from 100 to 200, 
+#   B has value as letters a, b ,c and C has value as matrix of 10 values 
+#   from 1 to 10 with 2 column.
+# # 4. Create a list with name “India.Movies” with two elements – first element
+#   is vector movies.name and have three values 
+#   (take some movies name of your own choice), second element is vector 
+#   Revenue and have three values like 2.3,4.5,5,6
+
+#1
+element_list<-list(v1=1:10,
+                   v2=c("Yes","No"),
+                   v3=c(T,F),
+                   v4=c(1,1,1,2,2,2))
+element_list
+
+#2
+prime_factor<-list(a=1:2,
+                   b=c(1,3),
+                   c=c(1,2,4),
+                   d=c(1,5),
+                   e=c(1,2,3,6),
+                   f=c(1,7),
+                   g=c(1,2,4,8),
+                   h=c(1,3,9),
+                   i=c(1,2,5,10))
+#3
+element_list2<-list(A=100:200,
+                   B=c("a","b","c"),
+                   C=matrix(1:10,5,2))
+
+#4
+movie_list<-list(movies.name<-c("Dark Knight","12 Angry Men","Shawshank Redemption"),
+                 revenue=c(2.3,4.5,5))
