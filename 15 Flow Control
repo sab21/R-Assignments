@@ -1,0 +1,116 @@
+# Assignments
+# Assignment – FLOW CONTROL
+# 1. Write R function to find discount% given to customer, if customer bill amount is 
+# more than 5000 then discount% is 5% else 2.5%.
+
+know_discount<-function(price){
+  discount=2.5
+  if(price>5000) discount=5;
+  message("Your discount is ",discount,"%")
+  return(message("Total payable:",price*(1-discount/100)));
+}
+
+know_discount(10000)
+
+
+# 2. Write R function to find voting of a person based on his age, 
+# if he greater than or equal to 18 then he can vote otherwise no; 
+# display proper message in last.
+voting_eligibility<-function(age){
+  if(age>0 & age<159){
+  if(age<18) print("YOU ARE NOT ELIGIBLE TO CAST VOTE")
+  else 
+    print("CONGRATS, YOU ARE ELIGIBLE TO CAST VOTE")
+  } else print("Age not proper")
+}
+voting_eligibility(114)
+
+# 3. Using Vectorized if find a given value is even or odd.
+x<-140
+ifelse(x%%2==0,print("X is EVEN"),print("X is ODD"))
+
+# 4. Write a function to find HRA given to employee based on their basic pay. 
+# Use below information to calculate HRA.
+# Basic pay HRA
+# Below 10000 5% of basic pay
+# 20000-30000 7% of basic pay
+# 30000-40000 9% of basic pay
+# 40000-50000 13% of basic pay
+# Above 50000 15% of basic pay
+hra_calculation<-function(basic_income){
+  hra=0
+  if(basic_income>0){
+    if(basic_income<=20000) {
+      hra=.05*basic_income
+    }else if (basic_income<=30000){
+      hra=.07*basic_income
+    }else if (basic_income<=40000){
+      hra=.09*basic_income
+    }else if (basic_income<=50000){
+      hra = .13*basic_income
+    }else hra=.15*basic_income
+  }else print("Basic Income can't be in Negative")
+  return(hra)
+}
+
+hra_calculation(100000)
+
+# 5. Create function to find the percent based on below information
+# Grade percent
+# A+ 90
+# A 80
+# B+ 70
+# B 60
+# C 50
+# D 40
+# E 30
+# F fail
+get_percent<-function(grade){
+  percent=switch(grade,"A+"=90,"A"=80,"B+"=70,"B"=60,"C"=50,"D"=40,"E"=30,"Fail")
+  return(percent);
+}
+get_percent("F")
+
+# 6. Find the multiple of 3 till multiple reaches to 50
+num=1;i=1
+repeat{
+  num=3*i
+  i=i+1
+  if(num>=50)break
+  print(num)
+}
+
+# 7. Create a function to find how many years it will take to get user given amount 
+# double if rate of interest is 8.5%. Bank gives interest annually.
+q7<-function(amount,roi=8.5){
+  year=0;total=amount
+  while(total<2*amount){
+    int=total*roi/100
+    total=total+int
+    year=year+1
+  }
+  return(year);
+}
+q7(10000)
+
+# 8. Create a function to find 10 multiple of 3 which are divisible by 2
+q8<-function(n=10){
+  m=1
+  for (i in 1:n){
+    m=3*2*i
+    print(m)
+  }
+}
+q8()
+
+# 9. Write R function to find how many days it will be to accumulate 5000, 
+# if i am adding 75 every day.
+q9<-function(perday,to_save){
+  saving=0; count=0
+  while(saving<to_save){
+    saving=saving+perday
+    count=count+1
+  }
+  return(count);
+}
+q9(75,5000)
