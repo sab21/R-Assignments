@@ -1,0 +1,69 @@
+# 
+# Factors Assignment: 
+#   1. You are leading a research team of five data analysts and that you want to 
+# evaluate their performance. To do this, you track their speed, evaluate each 
+# analyst as "Slow", "Fast" or "Ultra-fast", and save the results in speed_vector. 
+# As a first step, assign speed_vector knowing that: 
+# Analyst 1 is Fast, 
+# Analyst 2 is Slow, 
+# Analyst 3 is Slow, 
+#  Analyst 4 is Fast and 
+# Analyst 5is Ultra-fast. 
+# a. Define a variable factor_speed_vector. 
+# Take into account that there is a specific order for the factor levels. 
+# Do not change anything about the other lines in the sample code; 
+# they will print the resulting factor to the console and generate a summary of it. 
+# Use summary(). 
+# b. Check whether data analyst 2 is faster than data analyst 5 
+# and assign the result to compare_them
+
+speed_vector<-paste(("Analyst"),1:5)
+
+factor_speed_factor<-factor(speed_vector,ordered = T,
+                            levels = c("Analyst 2","Analyst 3","Analyst 1","Analyst 4","Analyst 5"),
+                            labels = c("Slow","Slow","Fast","Fast","Ultra Fast"))
+
+summary(factor_speed_factor)
+
+#b
+compare_them<-speed_vector[2]>speed_vector[5]
+compare_them
+
+
+# Functions Assignment: 
+# 1. Write a function to find final amount that needs to be paid by customer based on 
+# given quantity and price. Add vat as 4.4% and subtract discount of 10% to get final 
+# amount.
+get_final_amount<-function(price,qty=1,discount=10,vat=4.4){
+  price=price*qty
+  discount=price*discount/100
+  price=price-discount
+  vat=price*vat/100
+  price=price+vat
+  return(price)
+}
+
+get_final_amount(1000,3,20,5)
+
+
+# 2. Write a function to convert first, third and last character of given name into 
+# lowercase and rest should be in uppercase. 
+
+lower_1st_3rd_last_char<-function(name) {
+  name=paste0(tolower(substr(name,1,1)),toupper(substr(name,2,2)),tolower(substr(name,3,3)),
+  toupper(substr(name,4,nchar(name)-1)),tolower(substr(name,nchar(name),nchar(name))))
+  return(name)
+}
+lower_1st_3rd_last_char("Sabiadassd knasHCJNNN FF")
+
+
+# 3. Write a function to get h in a right angled triangle, where default 
+# value of p and b are 3 and 4 respectively.
+
+pythagoras_theorem<-function(p=3,b=4){
+  h=sqrt(p*p+b*b)
+  return(h)
+}
+pythagoras_theorem()
+pythagoras_theorem(12,5)
+
