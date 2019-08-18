@@ -1,0 +1,119 @@
+# R MT-1
+# Time:1hr30mins Total Marks-60
+# 1. What are data types in R? Mention any four data types with examples. (Marks-5)
+#Ans: Datatype of a value is an attribute that specifies which type of value of a
+#variable has.
+# Datatypes are basic character of data. In R it need not have to be defined exclusively
+#R's basic data types are character, numeric, integer, complex, and logical. 
+#R's basic data structures include the vector, list, matrix, data frame, and factors.
+#   1. Numeric (Any numerical value is by default numeric)
+num1<-4.2
+#   2. Integer (Non decimal numeric value)
+num2<-as.integer(2.8);num2
+#  3. Character: Chararcter value are stored in string and it must within quotes
+char1<-"Nikhil Analytics"
+#   4.Complex: Here imaginary number are stored where i^2 = -1
+num3<-5+3i
+#5. Logical
+m=5<4;m;class(m)
+
+# 2. a) How to find the data type of a given object in R? (Marks-2.5)
+#Ans
+#class function is used to determine the type of given object
+class(num3)
+# b) Convert the numeric vector (1, 2, 3) into character (Marks-2.5)
+#Ans
+v1<-c(1,2,3)
+class(v1)
+v1_as_character<-as.character(v1)
+
+# 3. Form a vector with first 10 multiples of 3 and name each element of the vector (Marks-5)
+#Ans
+v3<-seq(3,,3,10)
+v3
+names(v3)<-paste0("V",1:10);v3
+
+# 4. Write the methods for accessing elements from vector. Give examples.(Marks-5)
+# Ans:
+# Extracting element from vector can be done by indexing or from its name
+# Square bracket is used to extract element. Indexing starts from 1
+# Example:
+  v3[1] #display 1st
+  v3[1:5]#display 1st to 5th Value
+  v3[-5] #Display except 5th Value
+  v3["V5"]#display value having name V5
+
+# 5. Create a matrix Player_stats using the following data (Marks-10)
+# Total Run Player age
+# Rohit Sharma 6424 30
+# Virat Kohli 9030 29
+# M S Dhoni 9898 36
+player_stats<-matrix(c(6424,30,9030,29,9898,36),3,2, byrow = T)
+dimnames(player_stats) = list(c("Rohit Sharma","Virat Kohli","M S Dhoni"),
+                              c("Total Runs","Age"))
+  
+# a) For the above matrix add the details of three more players.
+# Jadeja 1914 29
+# Ashwin 675 31
+# Suresh Raina 5568 31 
+new_player<-matrix(c(1914,29,675,31,5568,31),3,2, byrow = T,
+                   dimnames = list(c("Jadeja","Ashwin","Suresh Raina"),
+                                   c("Total Runs","Age")))
+new_player
+(new_player_stats<-rbind(player_stats,new_player))
+
+# b) Add a new column Strike_rate to the above matrix.
+# Strike_rate
+# 87.08
+# 91.73
+# 88.46
+# 85.29
+# 86.98
+# 93.77
+strike_rate<-c(87.08,91.73,88.46,85.29,86.98, 93.77)
+
+(new_player_stats<-cbind(new_player_stats,strike_rate))
+
+# c) Extract the details of M S Dhoni from the Player_stats matrix.
+new_player_stats[3,];new_player_stats["M S Dhoni",]
+
+# d) Extract the age and Strike rate of all the players.
+new_player_stats[,2:3]
+
+# e) Find the mean of the runs scored by all the players.
+(colMeans(new_player_stats))
+mean_all<-apply(new_player_stats,2,mean)
+mean_run<-mean_all[1]
+
+# 6. Write a function to find the square root of a given number and round it to 
+#   2 decimal places. (Marks-5)
+find_sqrt<-function(num){
+  num=round(sqrt(num),2)
+  return(num)
+}
+find_sqrt(2)
+
+
+# 7. Write a function to convert first, third and last character of given name into
+# uppercase and rest should be in lowercase. (Marks-5)
+
+
+upper_1st_3rd_last_char<-function(name) {
+  name=paste0(toupper(substr(name,1,1)),tolower(substr(name,2,2)),toupper(substr(name,3,3)),
+              tolower(substr(name,4,nchar(name)-1)),toupper(substr(name,nchar(name),nchar(name))))
+  return(name)
+}
+upper_1st_3rd_last_char("Sabyasachi SAHU")
+
+# 8. Create a list with name example_list 
+# Values of even numbers from 1 to 20. B has a matrix with 3 rows and 
+#   3 columns with numbers 1 to 9. C contains a list of vowels. (Marks-5)
+example_list<-list("A"=seq(2,20,2),
+                   "B"=matrix(1:9,3,3),
+                   "C"=c("A","E","I","O","U"))
+example_list
+
+# a) Extract first two elements from the above list.
+example_list[1:2]
+# b) Extract 4th 
+example_list$A[4]
