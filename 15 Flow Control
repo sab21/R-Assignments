@@ -66,10 +66,11 @@ hra_calculation(100000)
 # E 30
 # F fail
 get_percent<-function(grade){
-  percent=switch(grade,"A+"=90,"A"=80,"B+"=70,"B"=60,"C"=50,"D"=40,"E"=30,"Fail")
+  percent=switch(grade,"A+"=90,"A"=80,"B+"=70,"B"=60,"C"=50,"D"=40,"E"=30,
+                 "F"="Fail","Invalid Grade")
   return(percent);
 }
-get_percent("F")
+get_percent("A+")
 
 # 6. Find the multiple of 3 till multiple reaches to 50
 num=1;i=1
