@@ -1,0 +1,157 @@
+# 
+# 1. Create the following vectors:
+#   a. Create a Vector called "evenNo" with all even value between 1 to 50.
+# Assign names to each element as "a1, a2, a3, ... and find 5th value
+# from it.
+(evenNo<-seq(2,50,2))
+names(evenNo)<-paste0("a",1:25)
+evenNo[5]
+
+
+# b. Create a Vector with first 20 multiple of 3. Find the 5th value from it.
+# Also find total, average, maximum and minimum among them.
+(vector_1b<-seq(3,,3,20))
+vector_1b[5]
+mean(vector_1b)
+max(vector_1b)
+min(vector_1b)
+summary(vector_1b)
+
+# c. Create an ordered Factor with name heart_rate for the following
+# heart rate data:
+#   Patient 1: F
+# Patient 2: F
+# Patient 3: S
+# Patient 4: S
+# Patient 5: M
+# Patient 6: F
+# Here levels are S, M, F and labels applied are Slow, Medium, Fast.
+# Compare the heart rate of patient 2 with patient 5.
+heart_rate<-c("F","F","S","S","M","F")
+names(heart_rate)<-paste("Patient",1:6)
+heart_rate
+
+heart_rate<-factor(heart_rate,ordered = T,levels = c("S","M","F"),
+                   labels = c("Slow","Medium","Fast"))
+heart_rate
+
+heart_rate["Patient 2"]>heart_rate["Patient 5"]
+
+
+# d. Write four different method of indexing (accessing) a list. And how
+# list is different from vector.
+
+# List can store all type of datatypes and object, it even can store another list whereas
+# Vector can store only one type of datatype ie either numeric or character or ligical
+# Vector is atomic where as List is recursive
+# Vector is 1 dimensional where as List is multi dimensional
+list4<-list("hrt"=heart_rate,"v1"=vector_1b,"v2"=evenNo)
+list4
+#indexing
+list4$hrt#Dollar extraction
+list4[2]#Indexing
+list4["hrt"]#extraction by indexing name
+list4["v1"]
+list4[c(F,T,F)]#logical extraction
+
+# 2. Create the variable Dilwale_list. The list contains the following
+# components:
+#   a. moviename: "Dilwale"
+# b. actors: a vector with the main actors' names as follows:
+# "Shah Rukh Khan", "Kajol", "Varun Dhawan", "Boman Irani", "Kirti Sanon","Johny Lever" 
+# c. ratings: a matrix that contains reviews as follows: STARS IMDB 3.00 TOI 4.00 
+# HT 2.50 NDTV 2.50 REDIFF 2.00 
+
+actors<-c("Shah Rukh Khan", "Kajol", "Varun Dhawan", "Boman Irani", "Kirti Sanon",
+          "Johny Lever") 
+rating<-matrix(c(3,4,2.5,2.5,2),5,1,dimnames = list(c("IMDB","TOI","HT","NDTV","REDIFF"),
+                                                    "Star"))
+
+Dilwale_list<-list("movieName"="Dilwale",
+                   "actors"=actors,
+                   "rating"=rating)
+Dilwale_list
+# Use the above created Dilwale_list and do the following: 
+# a. Select second actor and assign the result to second_actor.
+(second_actor<-Dilwale_list$actors[2])
+# b. Select all information regarding the third rating.Store the result in third_ratings
+(third_ratings<-Dilwale_list$rating[3,])
+
+# c. Add the year as 2015. 
+# Store the result to Dilwale_list _full
+(Dilwale_list_full<-c(Dilwale_list,"Year"=2015))
+
+# 3. Do the following:
+# a. Create a Barplot for below given Students Marks
+# A B C D E
+# 40 50 30 50 60
+q3<-c(40,50,30,50,60)
+names(q3)<-LETTERS[1:5]
+barplot(q3)
+
+
+
+# b. V1<- c(10,20,30,40,50,60)
+# V2<-c(4,5)
+# V3<-V1+V2
+# What values are stored in vector V3, do not execute in R.
+
+# Ans:v3=14,25,34,45,54,65
+
+# 4. Do the following:
+# a. Create a function to HRA given to employees based on their Employee level.
+#Use below data to calculate
+# Level HRA
+# L1 5000
+# L2 7500
+# L3 1000
+# L4 12500
+
+get_hra<-function(level){
+  hra=switch(level,"L1"=5000,"L2"=7500,"L3"=1000,"L4"=12500,"Enter Proper Level")
+  return(hra)
+}
+get_hra("l")
+get_hra("L1")
+
+
+
+# b. Create R user defined function to find how many days it will take to 
+# accumulate 20 lacs, if I am depositing 20000/- every month in my saving account. 
+# Rate of interest for saving account is 4% per annum.
+
+save_20L<-function(per_mnt=20000,roi=4){
+  saving=0;month=0
+  while(saving<2000000){
+    saving=saving+per_mnt
+    month=month+1
+    if(month%%12==0){
+      int=saving*roi/100
+      saving=saving+int
+    }
+  }
+  message("Days required to save 20L:",month*30)
+  return(saving)
+}
+
+save_20L()
+
+
+# 5. Create the following matrix with name hobbit_movie: 
+# US Non-US An Unexpected Journey 460.99 314.40 The Desolation of Smaug 290.47 NA 
+# The Battle of the Five Armies 309.31 165.80 The Fellowship of the Ring NA 552.57 
+# The Two Towers 310.76 338.72 The Return of the King 380.33 468.51 
+hobbit_movie<-matrix(c(460.99,290.47,309.31,NA,310.76,380.33,314.40,NA,165.8,
+                       552.57,338.72,468.51),6,2,
+                     dimnames = list(c("An Unexpected Journey","The Desolation of Smaug",
+                                       "The Battle of the Five Armies","The Fellowship of the Ring",
+                                       "The Two Towers","The Return of the King"),
+                                     c("US","NON US")))
+hobbit_movie
+
+# A. Find Total revenue for US and Non-US. 
+colSums(hobbit_movie,na.rm = T)
+# B. Find Average revenue for each movie.
+rowMeans(hobbit_movie,na.rm = T)
+
+# ALL THE BEST
