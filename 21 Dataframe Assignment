@@ -1,0 +1,105 @@
+# Dataframe Assignment: 
+# 1. Create dataframe for Order_detail with 10 rows and 5 columns. 
+#   Column 1: Serial_Number 1 to 10 Column 2: Orderid : A1 to A10 Column 
+#   3: Productid: P1 to P10 Column 4: Price: random values between 100 to 200 only 
+#   integer values Column 5: Quantity:random values between 10 to 20 only integer values 
+
+Order_detail<- data.frame("Serial_Number"=1:10,
+                          "Orderid" = paste0("A",1:10),
+                          "Productid" = paste0("P",1:10),
+                          "Price"=round(runif(10,100,200),2),
+                          "Quantity"=round(runif(10,10,20),0))
+str(Order_detail)
+Order_detail$Orderid=as.character(Order_detail$Orderid)
+summary(Order_detail)
+#Extraction
+Order_detail[[2]][2:4]
+Order_detail$Orderid[2:4]#list style
+Order_detail[,c("Orderid")][2:4]#array style
+Order_detail[,2][2:4]#index style
+
+
+
+#   a. Provide row names as Prod_info1 to Prod_info10
+(row.names(Order_detail)<-paste0("Product_info",1:10))
+  
+#   b. Sort Order_detail dataframe in ascending order of Price 
+
+(Order_detail<-Order_detail[order(Order_detail$Price),])
+
+
+#   c. Create Subset of Order_detail dataframe where Quantity is above 15. 
+order_subset<-subset(Order_detail, Quantity>15)
+order_subset
+
+#   d. Access following values from Order_detail dataframe: 
+#     i. Access last 4 rows for Productid 
+tail(Order_detail,4)
+
+#    ii. Access first 3 Orderid with their highest price 
+head(subset(Order_detail[order(Order_detail$Price,decreasing = T),],select = "Orderid"),3)
+head(Order_detail[order(Order_detail$Price,decreasing = T),2],3)
+
+#   
+# 2. Create a EMPLOYEE dataframe with 26 rows and 5 columns. 
+#   Column 1: ID : E100 to E125 Column 2: NAME : A to Z Column 
+#   3: AGE: random value between 20 to 100, Column 4: SEX: F ,M Column 
+#   5: SALARY: random value between 10000 to 20000. 
+EMPLOYEE<-data.frame("ID"=paste0("E",100:125),
+                     "Name"=LETTERS,
+                     "AGE"=as.integer(runif(26,20,100)),
+                     "SEX"=c("F","M"),
+                     "SALARY"=runif(26,10000,20000))
+EMPLOYEE
+
+
+#   a. Sort data frame EMPLOYEE in ascending order of AGE. 
+EMPLOYEE<-EMPLOYEE[order(EMPLOYEE$AGE),];EMPLOYEE
+
+#   b. Sort data frame EMPLOYEE in descending order of Salary for each group of Sex.
+EMPLOYEE<-EMPLOYEE[order(EMPLOYEE$SEX,EMPLOYEE$SALARY,decreasing = T),];EMPLOYEE
+
+
+#   c. Create a subset of EMPLOYEE with only Female records of age above 30. 
+(Above30FemaleEmployee<-EMPLOYEE[EMPLOYEE$SEX=="F" & EMPLOYEE$AGE>30,])
+
+subset(EMPLOYEE,SEX=="F" & AGE>30)
+
+#   d. Create a subset of EMPLOYEE with only Male records of salary below 15000. 
+subset(EMPLOYEE,SEX=="M" & SALARY<15000)
+
+#   e. Find average value of Salary for each group of Sex. Use aggregate() 
+aggregate(EMPLOYEE$SALARY,list(EMPLOYEE$SEX),mean)
+
+mean(EMPLOYEE$SALARY[EMPLOYEE$SEX=="M"])
+mean(EMPLOYEE$SALARY[EMPLOYEE$SEX=="F"])
+
+#   f. Find average value of Age and Salary for each group of Sex. Use aggregate()
+
+row.names(EMPLOYEE)<-paste0(letters,".)")
+
+
+aggregate(list(EMPLOYEE[,c("AGE","SALARY")]),by = list(EMPLOYEE$SEX),mean)
+
+
+
+# 3. How to store date values in a dataframe. Create some examples for this.
+
+# as.date() is used to store date values in data.frame()
+#whatever the input may be but it store date in YEAR MONTH DAY Format
+#Example
+date<-as.Date("12-08-1998","%d-%m-%y");date
+(date<-as.Date("12.08/1998","%m.%d/%Y"))
+(date<-as.Date("Dec-08,98","%b-%d,%y"))
+
+
+
+# 4. Create a Product.Sale dataframe with three columns: 
+#   Column 1: Date_of_sale: Starting from 01jan2016 to 30jan2016 
+#   Column 2: Pname: Iphone6, Nexus6, SGalaxy6 
+#   Column 3: City: Mumbai, Chennai, Bangalore
+
+Product.Sale<-data.frame(Date_of_sale=seq(as.Date("01,01-2016","%d,%m-%Y"),
+                                     as.Date("30Jan'16","%d%b'%y"),"day"),
+                    Pname=c("Iphone6", "Nexus6", "SGalaxy6" ),
+                    City=c("Mumbai", "Chennai", "Bangalore"))
