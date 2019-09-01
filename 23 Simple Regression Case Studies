@@ -1,0 +1,196 @@
+#Case Study
+
+#Case 1
+# Data is given for 10 years  population for  year  2001 to 2010.
+# 10.2,  10.4,  10.5,  10.6, 10.8, 10.10,  11.1, 11.3, 11.4, 11.6 
+# Questions -
+# Find the linear relationship between population and year and also 
+# predict the population figure for 2011 to 2015.
+
+
+year<-2001:2010
+population<-c(10.2,  10.4,  10.5,  10.6, 10.8, 10.10,  11.1, 11.3, 11.4, 11.6)
+model<-lm(population~year)
+summary(model)
+#Equation: -285.77 + 0.1479*year
+#Multiple R-squared:  0.7275
+#p-value: 0.001708
+#Since pvalue<.05 and R-sqrd >0.7 So we can conclude that the model is good fit
+
+
+plot(model$fitted.values, model$residuals)
+
+pred_population<-round(predict(model, newdata = data.frame(year=2011:2015)),1)
+names(pred_population)<-2011:2015
+pred_population
+predict(model, newdata = data.frame(year=2001))
+plot(model)
+
+
+
+# Case 2
+# Description: Data provided for weekly operation of an electric railway in a 
+# municipal area.
+# Variables in dataset Train.txt
+# 1.	Week Number   (Beginning with week ending Feb. 8,1888)
+# 2.	Number of cars operating  
+# 3.	Miles per week      
+# 4.	Passengers per week 
+# Question-
+#   Find out the linear relationship between passenger and number of car for given 
+#   weekly data, and describe the summary statistics.
+
+setwd("C:/Users/acer/Desktop/R Class Assignment/R part2 assignments/4Case Study Regression")
+
+case2<-read.table("TRAIN.txt")
+
+colnames(case2)<-c("Week_Num","cars_in_Opr","Miles_Per_Week","Passenger_per_week")
+head(case2)
+#Data Cleaning
+#misising Values
+any(is.na(case2))#No NA in data
+#Outliers
+boxplot(case2)
+#No outliers
+
+model=lm(case2$Passenger_per_week~case2$cars_in_Opr)
+summary(model)
+# Multiple R-squared:  0.9198 ">0.7",	Adjusted R-squared:  0.9153 
+# p-value: 2.643e-11; pvalue<.05
+#Since pvalue is less than .05 and R-sqrd >.7 therefore the model 
+#can be considered BEST FIT
+
+model$coefficients
+#passenger_per_week = -10493.98 + 375.68*cars_in_Opr
+
+plot(model)
+plot(model$residuals,model$fitted.values)#scattered plot, both are independent
+
+cars_in_Opr=99
+passengers_number=-10493.98 + 375.68*cars_in_Opr
+names(passengers_number)<-cars_in_Opr
+passengers_number
+
+predicted_passenger<-predict(model, newdata = data.frame(cars_in_Opr=1:20))
+
+predicted_passenger
+
+names(predicted_passenger)<-201:220
+#WHY its giving error when rows are not equal than 20
+#and giving same prediction for all sort of values
+
+
+
+
+#CASE 3
+data=read.table("Physical Strength and Job Performance.txt",
+                header = T)
+View(data)
+summary(data)
+any(is.na(data))
+#no missing value
+b<-boxplot(data)#contains outliers
+b$out
+#Questions - 
+# 1.	How many people exerted a force of 85 pounds?
+nrow(data)#147
+sum(data$GRIP>85)#130
+sum(data$ARM>85)#59
+sum(((data$GRIP+data$ARM)/2)>85)
+strength<-(data$GRIP+data$ARM)/2
+sum(strength>85)
+#103 observation found out of 147 where force exereted ia above 85 pound
+
+# 2.	If the distribution were normal, between which two values 
+#     would 95% of the values lie?
+qnorm(.975)
+qnorm(.975,lower.tail = F)
+pnorm(1.96)
+
+pnorm(1.96,mean = mean(strength),sd = sd(strength),lower.tail = F)
+qnorm(.975,mean = mean(strength),lower.tail = F)
+sd(strength)
+
+plot(strength)
+plot(density(strength))
+
+err<-1.96*sd(strength)/sqrt(length(strength))
+mean(strength)+err#97.75714
+mean(strength)-err#91.22585
+
+upper<-mean(strength)+qnorm(.975)*sd(strength);upper#134.0846
+lower<-mean(strength)-qnorm(.975)*sd(strength);lower#54.89837
+
+# 3.	Which of the following statements can we conclude is NOT true?
+#   a.	The scatterplots between strength scores (arm and grip) tend to be 
+#     positively related with ratings and work simulation.
+plot(data)
+cor(data)
+plot(strength,data$RATINGS)
+plot(strength,data$SIMS)
+
+#From Scatter plot we can conclude that strength(both arma nd grip) is 
+#related with SIMULATION but not with Ratings
+
+#   b.	Individuals with lower strength scores tended to receive 
+#     lower ratings and perform worse on the simulations than stronger individuals.
+plot(data$ARM,data$RATINGS)
+plot(data$GRIP,data$RATINGS)#people having same grip strength got same ratings
+#People with lower strength perform worse in simulations but not necessarily
+#got lower ratings - there is certainly some JHOL in rating
+
+#   c.	The scatterplots between arm and grip scores were more strongly 
+#     related to work simulation scores than supervisory ratings.
+TRUE
+
+#   d.	Grip scores and work simulation scores appear to have a lower 
+#     correlation coefficient than grip scores and ratings.
+attach(data)
+cor(GRIP,SIMS)#0.6398458
+cor(GRIP,RATINGS)#0.1832572
+cor(GRIP,SIMS)<cor(GRIP,RATINGS)
+FALSE
+
+# 4.	Find correlation matrix among variables and summarizing the various 
+#     correlations among the study variables.
+cor(data)
+#Grip~Rating, r=0.1832572, very weak
+#Arm~Rating, r=0.2212800, very weak
+#Grip~Sims, r=0.6398458, strong correlation
+#Arm~Sims, r=0.6860073 , strong correlation
+
+# 5.	What is the predicted SIMS score given an ARM score of 110?
+model<-lm(SIMS~ARM)
+summary(model)
+#Multiple R-squared:  0.4706
+#p-value: < 2.2e-16
+#Conclusion: Model is not best fit as R sqrd value is not greater than 0.7
+
+model$coefficients
+# (Intercept)         ARM 
+# -4.095160    0.054563 
+arm=110
+(p_sim=-4.095+0.05456*arm)#1.9066
+#or
+(p_sim<-predict(model,newdata = data.frame(ARM=110)))#1.90677 
+
+
+# 6.	What is the proportion of variance in the Ratings variable explained 
+#     by the Grip variable?
+model6<-lm(RATINGS~GRIP)
+summary(model6)
+#R-squared:  0.03358
+#It is very less
+
+# 7.	If we use the Grip variable to predict the SIMS variable, how far, 
+#     on average, would the predicted value be from the actual value?
+model7<-lm(SIMS~GRIP)
+summary(model7)
+#Residual standard error: 1.295
+plot(model7$fitted.values,model7$residuals)
+mean(abs(model7$fitted.values-SIMS))#1.026496
+
+sim_prdeicted<-predict(model7,newdata = data.frame(GRIP=GRIP))
+mean(abs(sim_prdeicted-data$SIMS))#1.026496
+#   
+
