@@ -1,0 +1,48 @@
+# Case: Smoking and Longevity
+# A study is designed to check the relationship between smoking and longevity. 
+# A sample of 40 men was taken and the average number of cigarettes smoked per day 
+# and the age at death was recorded and presented in the excel file smokings.xlsx. 
+# 1.	Can we conclude from the sample that longetivity is independent of smoking?
+# 2.	Based on the given scenario formulate your null and alternative hypothesis.
+# 3.	Find the correlation between cigarettes and longevity?  And draw your own conclusion.
+# 
+# Questions -
+#   1.	What is the key difference between cor(x,y) and cor(data)?
+#   2.	Interpret a correlation of -0.25 between the variables A and B.
+
+
+data<-read.csv("C:/Users/acer/Desktop/R Class Assignment/R part2 assignments/3Case Study Correlation/Case 1/smoking.csv")
+View(data)
+str(data)
+summary(data)
+boxplot(data)
+
+
+cor(data$cigarettes,data$longetivity)
+#r=-0.58
+
+#H0(Null Hypothesis): There is NO correlation betweeen Smoking and Longevity 
+#H1(Alternative Hypothesis): There is some correlation between them
+#If P-value comes less than .05 than we can reject H0
+with(data,cor.test(cigarettes,longetivity))
+p.value<-with(data,cor.test(cigarettes,longetivity))$p.value
+p.value<0.05#TRUE
+#Since P value is less than .05 there fore we can reject Null Hypothesis
+#with given data and conclude that there is correlation between 
+#smoking and longetivity 
+r=cor(data$cigarettes,data$longetivity);r
+#r=-0.58 means strong negative coreelation is there between smking and longetivity
+#i.e. more smoking can leads to less longetivity
+
+plot(data)
+
+#Q1
+#cor(x,y) gives the by default pearson r value by default  between x y
+#cor(data) gives the correlation matrix for all the column against each column
+#present in the matrix
+cor(data$cigarettes,data$longetivity)
+cor(data)
+
+#Q2
+#cor(a,b); r=-.25
+#Very weak negative correlation is there between a and b 
