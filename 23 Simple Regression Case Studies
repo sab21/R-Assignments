@@ -245,6 +245,16 @@ cov(SIMS,GRIP)/cov(GRIP,GRIP)#0.04546299
 #Intercept= mean(y)-slope*mean(x)
 (Intercept=mean(SIMS)-Slope*mean(GRIP))
 
+#MSE = Sum Sqr of(fitted - actual)/dof; dof = n - 1
+(sum((SIMS-mod$fitted.values)^2)/(147-1))
+
+#RMSE : Residual standard error: 1.295
+sd(mod$residuals)#1.290297
+sd(mod$fitted.values-SIMS)#1.290297
+#RMSE = sqrt of MSE
+sqrt(sum((SIMS-mod$fitted.values)^2)/(147-1))
+
+
 #R-Squared = Summamtion(fitted  - mean)^2/summation(actual - mean)^2
 sum((mod$fitted.values-mean(SIMS))^2)/sum((SIMS-mean(SIMS))^2)# 0.4094026
 #or
