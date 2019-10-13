@@ -7,7 +7,7 @@
 Order_detail<- data.frame("Serial_Number"=1:10,
                           "Orderid" = paste0("A",1:10),
                           "Productid" = paste0("P",1:10),
-                          "Price"=round(runif(10,100,200),2),
+                          "Price"=round(runif(10,100,200),0),
                           "Quantity"=round(runif(10,10,20),0))
 str(Order_detail)
 Order_detail$Orderid=as.character(Order_detail$Orderid)
