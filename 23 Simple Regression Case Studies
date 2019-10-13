@@ -1,6 +1,7 @@
 #Case Study
-
+##########################################################################################
 #Case 1
+##########################################################################################
 # Data is given for 10 years  population for  year  2001 to 2010.
 # 10.2,  10.4,  10.5,  10.6, 10.8, 10.10,  11.1, 11.3, 11.4, 11.6 
 # Questions -
@@ -25,10 +26,11 @@ names(pred_population)<-2011:2015
 pred_population
 predict(model, newdata = data.frame(year=2001))
 plot(model)
+#-------------------------------------------END-------------------------------------------
 
-
-
+#========================================================================================
 # Case 2
+#========================================================================================
 # Description: Data provided for weekly operation of an electric railway in a 
 # municipal area.
 # Variables in dataset Train.txt
@@ -40,7 +42,9 @@ plot(model)
 #   Find out the linear relationship between passenger and number of car for given 
 #   weekly data, and describe the summary statistics.
 
-setwd("C:/Users/acer/Desktop/R Class Assignment/R part2 assignments/4Case Study Regression")
+getwd()
+setwd("~/")
+setwd("C:/Users/acer/Desktop/R Class Assignment/R part 2 assignments/4Case Study Regression")
 
 case2<-read.table("TRAIN.txt")
 
@@ -53,36 +57,46 @@ any(is.na(case2))#No NA in data
 boxplot(case2)
 #No outliers
 
-model=lm(case2$Passenger_per_week~case2$cars_in_Opr)
+model=lm(case2$Passenger_per_week~case2$cars_in_Opr)#issue in predict
+
+model2<-lm(Passenger_per_week~cars_in_Opr,data=case2)#not issue in predict; UsE THIS
 summary(model)
+summary(model2)
+length(case2$cars_in_Opr)
+length(case2$Passenger_per_week)
+View(case2)
+
 # Multiple R-squared:  0.9198 ">0.7",	Adjusted R-squared:  0.9153 
 # p-value: 2.643e-11; pvalue<.05
 #Since pvalue is less than .05 and R-sqrd >.7 therefore the model 
 #can be considered BEST FIT
 
-model$coefficients
-#passenger_per_week = -10493.98 + 375.68*cars_in_Opr
+model2$coefficients
+#passenger_per_week = -10493.9848 + 375.677*cars_in_Opr
 
-plot(model)
-plot(model$residuals,model$fitted.values)#scattered plot, both are independent
+plot(model2)
+plot(model2$residuals,model2$fitted.values)#scattered plot, both are independent
 
-cars_in_Opr=99
-passengers_number=-10493.98 + 375.68*cars_in_Opr
+cars_in_Opr=220
+passengers_number=-10493.984 + 375.677*cars_in_Opr
 names(passengers_number)<-cars_in_Opr
 passengers_number
 
-predicted_passenger<-predict(model, newdata = data.frame(cars_in_Opr=1:20))
-
+predicted_passenger<-predict(model2, newdata = data.frame(cars_in_Opr=220:250))
+names(predicted_passenger)<-220:250
 predicted_passenger
 
-names(predicted_passenger)<-201:220
+
+#========================================================
 #WHY its giving error when rows are not equal than 20
 #and giving same prediction for all sort of values
+#Because there is naming ambiguity in newdata and actual data
+#========================================================
 
 
-
-
+#=============================================================
 #CASE 3
+#=============================================================
 data=read.table("Physical Strength and Job Performance.txt",
                 header = T)
 View(data)
@@ -96,27 +110,38 @@ b$out
 nrow(data)#147
 sum(data$GRIP>85)#130
 sum(data$ARM>85)#59
+
 sum(((data$GRIP+data$ARM)/2)>85)
+#or
 strength<-(data$GRIP+data$ARM)/2
 sum(strength>85)
-#103 observation found out of 147 where force exereted ia above 85 pound
+#103 observation found out of 147 where force exereted is above 85 pound
 
 # 2.	If the distribution were normal, between which two values 
 #     would 95% of the values lie?
-qnorm(.975)
-qnorm(.975,lower.tail = F)
-pnorm(1.96)
 
-pnorm(1.96,mean = mean(strength),sd = sd(strength),lower.tail = F)
-qnorm(.975,mean = mean(strength),lower.tail = F)
-sd(strength)
+# lowerlimit=mean-Z*sd
+# upperlimit=mean+z*sd
+# 
+# Z = 1.96 at 95%
 
-plot(strength)
-plot(density(strength))
 
-err<-1.96*sd(strength)/sqrt(length(strength))
-mean(strength)+err#97.75714
-mean(strength)-err#91.22585
+
+#qnorm(.975)
+#qnorm(.975,lower.tail = F)
+#pnorm(1.96)
+
+#
+#pnorm(1.96,mean = mean(strength),sd = sd(strength),lower.tail = F)
+#qnorm(.975,mean = mean(strength),lower.tail = F)
+#sd(strength)
+
+#plot(strength)
+#plot(density(strength))
+
+# err<-1.96*sd(strength)/sqrt(length(strength))
+# mean(strength)+err#97.75714
+# mean(strength)-err#91.22585
 
 upper<-mean(strength)+qnorm(.975)*sd(strength);upper#134.0846
 lower<-mean(strength)-qnorm(.975)*sd(strength);lower#54.89837
@@ -186,11 +211,50 @@ summary(model6)
 #     on average, would the predicted value be from the actual value?
 model7<-lm(SIMS~GRIP)
 summary(model7)
+
 #Residual standard error: 1.295
+
+
 plot(model7$fitted.values,model7$residuals)
 mean(abs(model7$fitted.values-SIMS))#1.026496
 
 sim_prdeicted<-predict(model7,newdata = data.frame(GRIP=GRIP))
 mean(abs(sim_prdeicted-data$SIMS))#1.026496
 #   
+
+
+
+#Theory
+mod<-lm(SIMS~GRIP)
+summary(mod)
+mod$coefficients
+# (Intercept)        GRIP 
+# -4.80967518  0.04546299 
+
+#Now,Slope= sd(y)/sd(x)*cor(x,y)
+(Slope<-sd(SIMS)/sd(GRIP)*cor(SIMS,GRIP))
+
+#Intercept= mean(y)-slope*mean(x)
+(Intercept=mean(SIMS)-Slope*mean(GRIP))
+
+#R-Squared = Summamtion(fitted  - mean)^2/summation(actual - mean)^2
+sum((mod$fitted.values-mean(SIMS))^2)/sum((SIMS-mean(SIMS))^2)# 0.4094026
+#or
+#R-sqrd = 1 -  (SSE/SST)
+#where SSE = Sum of sqr of error = Summation(Yi-yFitted)^2
+#where SST = Sum of sqr of total = Summation(Yi - mean Y)^2
+1-sum((SIMS-mod$fitted.values)^2)/(sum((SIMS-mean(SIMS))^2))#0.4094026
+
+#R-Sqr always increases with addition of in features in the model
+# so we consider Adj R-Squared
+#Adj R-Sqr = 1-SSE/SST*(n-1)/(n-k-1)
+#where  n = no of obs; sample size
+#k= no of features
+#dof = n-k-1
+
+nrow(data)#147
+#k=1 
+1-sum((SIMS-mod$fitted.values)^2)/(sum((SIMS-mean(SIMS))^2))*(147-1)/(147-1-1)#0.4053295
+
+
 
