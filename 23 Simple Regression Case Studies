@@ -223,8 +223,9 @@ mean(abs(sim_prdeicted-data$SIMS))#1.026496
 #   
 
 
-
+#===================================================
 #Theory
+#===================================================
 mod<-lm(SIMS~GRIP)
 summary(mod)
 mod$coefficients
@@ -233,6 +234,13 @@ mod$coefficients
 
 #Now,Slope= sd(y)/sd(x)*cor(x,y)
 (Slope<-sd(SIMS)/sd(GRIP)*cor(SIMS,GRIP))
+#or
+#slope = cov(x,y)/cov(x,x)
+cov(SIMS,GRIP)/cov(GRIP,GRIP)#0.04546299
+#or
+#slope=
+(mean(GRIP)*mean(SIMS)-mean(GRIP*SIMS))/(mean(GRIP)*mean(GRIP)-mean(GRIP*GRIP))#0.04546299
+
 
 #Intercept= mean(y)-slope*mean(x)
 (Intercept=mean(SIMS)-Slope*mean(GRIP))
