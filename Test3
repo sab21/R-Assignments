@@ -1,0 +1,114 @@
+# Max Time: 1 hour R MT 2 Max Marks: 50
+# 1. Create a dataframe WeatherData containing the following columns.
+# Date: Dates from 1st January 2017 to 10th January 2017.
+# Temperature: 32,35,28,24,32,31,43,23,34,34
+# WindSpeed: 6,7,2,7,4,2,3,7,5,6
+# Event: Rain, Sunny, Snow, Snow, Rain, Sunny, Sunny, Rain, Sunny, Sunny
+WeatherData<-data.frame(Date=seq(as.Date("1/1/2017","%d/%m/%Y"),
+                                 as.Date("10/1/2017","%d/%m/%Y"),1),
+                        Temperature=c(32,35,28,24,32,31,43,23,34,34),
+                        WindSpeed=c(6,7,2,7,4,2,3,7,5,6),
+                        Event=c("Rain", "Sunny", "Snow", "Snow", "Rain", "Sunny", 
+                              "Sunny", "Rain", "Sunny", "Sunny"))
+
+WeatherData
+# a. View only first three records of WeatherData
+head(WeatherData,3)
+# b. Find the column names and the dimension of WeatherData.
+colnames(WeatherData)
+str(WeatherData)
+dim(WeatherData)
+
+# c. Extract the records in which the Event is Sunny and store it in 
+#another data frame SunnyEvent
+SunnyEvent<-subset(WeatherData,Event=="Sunny")
+
+# d. Find the average of Temperature of all Rain Event.
+mean(subset(WeatherData,Event=="Rain")$Temperature)#29
+
+# 2. Create a dataframe SalesReport containing the following columns.
+# ProductID: A_101, A_102,.........A_110
+# ProductCategory: A and B for the alternate rows
+# Unitprice: random integer values between 200 and 300
+# Quantity: random integer values between 10 and 20
+SalesReport<-data.frame(ProductID=paste0("A_",101:110),
+                        ProductCategory=c("A","B"),
+                        Unitprice=as.integer(runif(10,200,300)),
+                        Quantity=round(runif(10,10,20),0))
+View(SalesReport)
+
+# a. Find the number of rows and number of columns of SalesReport dataframe.
+nrow(SalesReport)
+ncol(SalesReport)
+# b. Create a new column Price which is the product of Unitprice and Quantity.
+SalesReport<-cbind(SalesReport,Price=SalesReport$Unitprice*SalesReport$Quantity)
+SalesReport
+
+# c. Find the average sales for each ProductCategory.
+aggregate(SalesReport$Price,list(SalesReport$ProductCategory),mean)
+
+# d. Find the number of sales for each ProductCategory.
+with(SalesReport,(aggregate(Quantity,list(ProductCategory),sum)))
+
+# 3. Create a dataset Advertising in R using advertising.csv. 
+#Perform correlation test on Radio and Sales, Newspaper and Sales and 
+#interpret the results.
+
+data<-read.csv("C:/Users/acer/Desktop/R Class Assignment/Test/R module test 2/advertising.csv")
+View(data)
+attach(data)
+#Assumption:  H0(Null Hypothesis) - There is  no Correlation between Radio and Sales
+#             H1(Alternative Hypothesis) - There is Correlation between Radio and Sales
+cor(Radio,Sales)#r=0.5762226: strong positive correlation
+cor.test(Radio, Sales)#P-Value<.05
+#Since P-value is less than 0.05 therefore we REJECT H0 and conclude that
+#theres is correlation between Radio and Sales
+#From r=0.58 it can concluded that with increase in Radio there is increase in Sales
+
+#Assumption:  H0(Null Hypothesis) - There is  no Correlation between Newspaper and Sales
+#             H1(Alternative Hypothesis) - There is Correlation between Newspaper and Sales
+cor(Newspaper,Sales)#r=0.228299: Weak positive correlation
+cor.test(Newspaper, Sales)#p-value = 0.001148
+#Since P-value is less than 0.05 therefore we REJECT H0 and conclude that
+#theres is correlation between Radio and Sales
+#From r=0.23 it can concluded that with increase in Radio there is increase in Sales
+#but the correlation is very weak
+
+#So we can conclude that impact of Radio over Newspaper is more in terms of Sales
+
+
+# 4. Using the Advertising dataframe build a regression analysis model to predict 
+#Sales using the variable TV. Test the significance of the test as well.
+
+#Regression
+#Assume that the data is random and unformly distributed
+plot(density(TV))
+plot(density(Sales))
+#Linearity
+plot(TV,Sales)#Data is leniar
+#Missing Value
+any(is.na(data))#FALSE
+#Outlier
+boxplot(TV,Sales)#No Outlier
+
+#Build Model
+mod<-lm(Sales~TV)
+# 
+# Assume that the error term ϵ in the linear regression model is independent of x, and is 
+# normally distributed, with zero mean and constant variance. We can decide whether there is 
+# any significant relationship between x and y by testing the null hypothesis that β = 0.
+summary(mod)
+#R-squared:  0.6119
+#p-value: < .05
+
+#As the p-value is much less than 0.05, we reject the null hypothesis that β = 0. 
+#Hence there is a significant relationship between the variables in the 
+#linear regression model of the data.
+
+#But since r-Squared value is less than 0.7 there fore it cannot be 
+#taken as good fit model
+
+mod$coefficients
+# Intercept)          TV 
+# 7.03259355  0.04753664 
+#Equation:Sales=7.03+.0475*TV
