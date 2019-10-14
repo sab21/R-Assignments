@@ -1,0 +1,108 @@
+#Decision tree - is used to prepare a model to predict dependent variable
+#using independent.
+#Here Dependent will be binary or categorial
+#and independent variable can be any values(categorial or numeric)
+
+#In R ID3 model(Iterative Dichtomicer) is used to build decision tree
+#where as CART(classificartion and reression tree model) model is is used to perform random forest
+
+#Gini Index = p^2 + q^2
+#entropy = -plog2p+ - qlog2q
+#information gain = entropy of target - entropy of feature
+
+#1st node is root node. and last note is leaf node which is our target
+#Rest nodes in between is called decision node
+
+#Decision tree using rpart package
+install.packages("rattle")
+install.packages("rpart.plot")
+
+library(rpart)
+library(rattle)
+library(rpart.plot)
+library(RColorBrewer)
+
+
+readingSkills<-read.csv("C:/Users/acer/Desktop/R Class Assignment/R Part 3 Machine Learning/7. Decision Tree/readingSkills.csv")
+str(readingSkills)
+View(readingSkills)
+
+sample.index<-sample(2,nrow(readingSkills),replace = T,prob = c(0.7,0.3))
+
+
+train<-readingSkills[sample.index==1,]
+test<-readingSkills[sample.index==2,]
+
+#checkinh NA
+sapply(readingSkills,function(x) sum(is.na(x)))
+#checking Outliers
+boxplot(readingSkills)
+
+#dropping identification variable
+train<-train[,-1]
+test<-test[,-1]
+
+#building decision tree model
+DT_model<-rpart(nativeSpeaker ~ .,data=train,method = "class")
+fancyRpartPlot(DT_model)
+
+DT_model
+
+#cp - complex parameter is used to check error rate 
+#at various level of decision tree
+
+printcp(DT_model)
+#model validation
+# Predict the values of the test set: pred
+pred <- predict(DT_model, test, type = "class")
+pred
+# Construct the confusion matrix: conf
+conf <- table(test$nativeSpeaker, pred)
+conf
+
+
+pred2 <- predict(DT_model, test, type = "prob")
+pred2
+pre2<-factor(ifelse(pred2[,"yes"]>=0.5,"yes","no"))
+conf <- table(test$nativeSpeaker, pre2)
+conf
+# pred
+#     no yes
+# no  29   3
+# yes  1  30
+# Print out the accuracy
+print(sum(diag(conf)) / sum(conf))#0.9365079
+
+
+
+# Prune the tree: pruned
+pruned<-prune(DT_model,cp=0.001)
+# Draw pruned
+fancyRpartPlot(pruned)
+
+# Predict probability values using the model: all_probs
+all_probs<-predict(DT_model,test,type="prob")
+all_probs
+#ROC curve
+
+# Load the ROCR library
+library(ROCR)
+probs <- predict(DT_model, test, type = "prob")[,2]
+
+# Make a prediction object: pred
+
+pred<-prediction(probs,test$nativeSpeaker)
+
+# Make a performance object: perf
+perf<-performance(pred,"tpr","fpr")
+
+# Plot this curve
+plot(perf)
+
+# Make a performance object: perf
+perf<-performance(pred,"auc")
+
+# Print out the AUC
+perf@y.values[[1]]
+
+#As AUC= 0.96875 whic means model is good fit model
