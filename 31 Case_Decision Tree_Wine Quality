@@ -1,0 +1,101 @@
+#CASE STUDIES
+
+#======================================================
+# RED WINE
+#------------------------------------------------------
+
+red_raw<-read.csv("C:/Users/acer/Desktop/R Class Assignment/R Part 3 Machine Learning/7. Decision Tree/Case Study/Case 2/winequality-red.csv",sep = ";",quote = "")
+View(red_raw)
+
+
+any(is.na(red_raw))
+
+boxplot(red_raw)
+colnames(red_raw)
+
+#transform data
+red_raw$X..quality...<-factor(red_raw$X..quality...)
+summary(red_raw$X..quality...)
+
+#sampling
+set.seed(132)
+sample.index<-sample(2,nrow(red_raw),prob = c(0.7,0.3),replace = T)
+
+train<-subset(red_raw,sample.index==1)
+test<-red_raw[sample.index==2,]
+
+#building
+mod<-rpart(X..quality...~.,data=train)
+fancyRpartPlot(mod,type = 2)
+
+printcp(mod)
+#model validation
+pred <- predict(mod, test,type="class")
+pred
+# Construct the confusion matrix: conf
+conf <- table(test$X..quality..., pred)
+conf
+
+print(sum(diag(conf)) / sum(conf))#0.5651303 
+#Very low accuracy, not good fit
+
+# Prune the tree: pruned
+pruned<-prune(mod,cp = .01)
+# Draw pruned
+fancyRpartPlot(pruned)
+
+
+
+#ROC curve
+#Couldn't perform ROC as no of class is greater than 2'
+cordata<-cor(red_raw[-12])
+head(red_raw)
+str(red_raw)
+summary(red_raw)
+write.csv(cordata,"xxx.csv")
+
+#=======================================================================
+#WHITE WINE
+#=======================================================================
+white_raw<-read.csv("C:/Users/acer/Desktop/R Class Assignment/R Part 3 Machine Learning/7. Decision Tree/Case Study/Case 2/winequality-white.csv",sep = ";",quote = "")
+View(white_raw)
+
+
+any(is.na(red_raw))
+
+boxplot(red_raw)
+colnames(red_raw)
+
+cordata<-cor(white_raw)
+write.csv(cordata,"yyywhtewinw.csv")
+#transform data
+white_raw$X.quality.<-factor(white_raw$X.quality.)
+summary(white_raw$X.quality.)
+
+#sampling
+set.seed(132)
+sample.index<-sample(2,nrow(white_raw),prob = c(0.7,0.3),replace = T)
+
+train<-subset(white_raw,sample.index==1)
+test<-white_raw[sample.index==2,]
+
+#building
+mod<-rpart(X.quality.~.,data=train)
+fancyRpartPlot(mod)
+
+printcp(mod)
+#model validation
+pred <- predict(mod, test,type="class")
+pred
+# Construct the confusion matrix: conf
+conf <- table(test$X.quality., pred)
+conf
+
+print(sum(diag(conf)) / sum(conf))#0.5204638
+
+
+# Prune the tree: pruned
+pruned<-prune(mod,cp = .01)
+# Draw pruned
+fancyRpartPlot(pruned)
+#Very low accuracy, not good fit
