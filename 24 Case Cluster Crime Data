@@ -1,0 +1,129 @@
+# # Case Study on Crime Data using Cluster Analysis:
+# #   Your client has provided you with a csv file crime_data.csv, containing information on the 
+# crimes committed in each of the 50 US states and the percentage of urban population. 
+# He'd like you to group the states in 4 clusters. He didn't specify which similarity to use, 
+# but the euclidean distance. You decide to try out techniques: k-means, single linkage, complete 
+# linkage and average linkage hierarchical clustering. You then want to compare the results by 
+# calculating the Dunn's indices to make a conclusion. Which clustering will you deliver to your 
+# client?
+# Perform the following using R:
+# 1. Extract the data from crime_data.csv using R
+setwd("C:/Users/acer/Desktop/R Class Assignment/R part 2 assignments/5Cluster Analysis")
+
+crime_raw<-read.csv("C:/Users/acer/Desktop/R Class Assignment/R part 2 assignments/5Cluster Analysis/crime_data.csv")
+dim(crime_raw)#50,5
+head(crime_raw)
+View(crime_raw)
+any(is.na(crime_raw))
+
+# 2. Scale the dataset using scale(). Use the scaled dataset to perform the following tasks.
+crime_scale<-scale(crime_raw[-1])
+#scale function is used to make all variables of same digits
+
+plot(hclust(dist(crime_raw)))
+plot(hclust(dist(crime_scale)))
+# hcluster_res<-hclust(dist(crime_scale))
+# nc<-cutree(hcluster_res,4)
+# 
+# set1<-subset(crime_raw,nc==1)
+# set2<-subset(crime_raw,nc==2)
+# set3<-subset(crime_raw,nc==3)
+# set4<-subset(crime_raw,nc==4)
+# library(xlsx)
+# setwd("C:/Users/acer/Desktop/R Class Assignment/R part 2 assignments/5Cluster Analysis")
+# write.xlsx(set1,"Crime_hclust.xlsx",sheetName = "Sheet1")
+# write.xlsx(set2,"Crime_hclust.xlsx",sheetName = "Sheet2")
+# write.xlsx(set3,"Crime_hclust.xlsx",sheetName = "Sheet3")
+# write.xlsx(set4,"Crime_hclust.xlsx",sheetName = "Sheet3")
+
+# 3. Apply kmeans() to this scaled dataset. You want 4 clusters. Set the nstart argument to 20 to
+# achieve a robust result.
+#nstart=20 - this is used to make result more robust.
+# system will perform 20 iterations to get cluster result
+km_cluster<-kmeans(crime_scale,4,nstart = 20)
+new_crime<-cbind(crime_raw,km_cluster$cluster)
+View(new_crime)
+table(new_crime$`km_cluster$cluster`)
+
+
+write.xlsx(new_crime,"Crime_hclust.xlsx",sheetName = "Sheet3")
+
+new_crime[order(new_crime$`km_cluster$cluster`),]
+     
+     
+# 4. Plot the scree plot and find out optimal k value. If required use this k value to generate
+# clusters using kmeans().
+
+screeplot<-function(data,k=10,seed=12345){
+  ratio<-c(rep(0,k))
+  set.seed(seed)
+  for(i in 1:k){
+    km_res<-kmeans(data,i)
+    ratio[i]<-km_res$tot.withinss/km_res$totss
+  }
+  plot(ratio,type = "b")
+}
+
+screeplot(crime_scale)
+#fROM Scree plot no of cluster can be considered as 5
+
+km_cluster5<-kmeans(crime_scale,5,nstart = 20)
+new_crime5<-cbind(crime_raw,km_cluster5$cluster)
+View(new_crime5)
+write.xlsx(new_crime5,"Crime_hclust.xlsx",sheetName = "Sheet3")
+
+new_crime5[order(new_crime5$`km_cluster$cluster`),]
+
+#From Result its concluded better to select cluster of 
+
+
+# 5. Apply single linkage, complete linkage and average linkage hierarchical clustering by
+# following these steps:
+# a. Calculate the distance matrix.
+#dist_raw<-dist(crime_raw) - No need
+dist_scale<-dist(crime_scale)
+
+# b. Call hclust() to perform the single-linkage, complete linkage and average linkage
+# hierarchical clustering.
+
+hclust_single<-hclust(dist_scale,method='single')
+hclust_complete<-hclust(dist_scale,method='complete')#default
+hclust_average<-hclust(dist_scale,method='average')
+
+# c. Cut the tree in 4 clusters with cutree().
+hclust_single_result<-cutree(hclust_single,4)
+hclust_complete_result<-cutree(hclust_complete,4)
+hclust_average_result<-cutree(hclust_average,4)
+
+
+# d. Plot the dendograms for each of the above clusters.
+plot(hclust(dist_scale,"single"))
+plot(hclust(dist_scale,"complete"))
+plot(hclust(dist_scale,"average"))
+#From Plot complete linkage has optimum result
+
+# 6. Use dunn() to calculate the the Dunn's index. Print out the results
+#dunn_index - is used to identify which method of cluster
+#gives better clustering result,
+#It used dataset and cluster_number and return a numeric
+#values. lower numeric value better result
+#use package - cluster, clvalid
+
+library(cluster)
+library(clValid)
+
+dunn(Data=dist_scale,clusters = hclust_single_result)#0.2262422
+dunn(Data=dist_scale,clusters = hclust_complete_result)#0.1786575
+dunn(Data=dist_scale,clusters = hclust_average_result)#0.2137153
+
+
+# 7. Interpret which cluster method is feasible among all.
+#lower numeric value better result
+#complete method has lower values, so we select complete method
+
+# 8. Create different Datasets for different clusters formed.
+newCrime<-cbind(crime_raw,cluster=hclust_complete_result)
+View(newCrime)
+table(newCrime$cluster)
+
+write.csv(newCrime,"C:/Users/acer/Desktop/R Class Assignment/R part 2 assignments/5Cluster Analysis/hclustResult.csv")
