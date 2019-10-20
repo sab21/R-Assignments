@@ -128,6 +128,42 @@ solution
 #RSMR(root mean sqr of residual) -  should be small. 
 #it gives error in calculating FA
 
+
+# Compute eigenvalue of factor 1
+loadings_fac1 = solution$loadings[,1]
+eigenv_fac1 = sum(loadings_fac1^2); eigenv_fac1#2.13293
+# Compute proportion variance
+eigenv_fac1/6
+
+
+#Uniqueness & Communality.
+solution$uniquenesses
+#Uniqueness of Stat is 0.709, highest among all by 0.35
+
+# Calculate uniqueness of distant variable i.e STATS
+loadings_distant = solution$loadings[6,]
+communality_distant = sum(loadings_distant^2); communality_distant#0.2635817
+
+#Since From Above we found that Stats has:
+#   h2 is below 0.3
+#   uniqueness is 0.709 
+#   communality distance is 0.26 
+#So we can drop STATS 
+
+################                 Visulaization         ###################
+
+### Plot loadings against one another
+load = solution$loadings[,1:2]
+plot(load, type="n") # set up plot 
+text(load,labels=names(data),cex=.7) # add variable names
+
+########## Creating composite variables  ################
+
+Science = rowMeans(cbind(data$BIO,data$GEO,data$CHEM))
+Mathematics = rowMeans(cbind(data$ALG,data$CALC,data$STAT))
+combined_data = cbind(Science,Mathematics)
+combined_data = as.data.frame(combined_data)
+
 #To get new variable (factor)
 fact.score<-factor.scores(data,solution); fact.score
 factors.values<-fact.score$scores;factors.values
