@@ -1,5 +1,5 @@
 #======================================
-# EFA
+# EFA - Education For All
 #======================================
 
 setwd("C:/Users/acer/Desktop/R Class Assignment/R part 2 assignments/7Factor Analysis Using R")
@@ -90,3 +90,11 @@ View(new_data)
 #multicollinearity  will exit if independent varibales are correlated
 
 
+weight<-c(.5,.5)
+new_data$score<-new_data[,1]*weight[1]+new_data[,2]*weight[2]
+
+
+View(new_data)
+new_data_sorted<-new_data[order(-new_data[,9]),]
+top10<-new_data_sorted[0:10,]
+top10
