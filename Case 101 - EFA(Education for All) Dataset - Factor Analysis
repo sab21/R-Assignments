@@ -1,0 +1,92 @@
+#======================================
+# EFA
+#======================================
+
+setwd("C:/Users/acer/Desktop/R Class Assignment/R part 2 assignments/7Factor Analysis Using R")
+data<-read.csv("dataset_EFA.csv")
+names(data)
+str(data)
+head(data)
+
+#calculate the correlation matrix
+corMat<-cor(data)
+corMat
+#       BIO       GEO      CHEM       ALG      CALC      STAT
+# BIO  1.0000000 0.6822208 0.7470278 0.1153204 0.2134271 0.2028315
+# GEO  0.6822208 1.0000000 0.6814857 0.1353557 0.2045215 0.2316288
+# CHEM 0.7470278 0.6814857 1.0000000 0.0838225 0.1364251 0.1659747
+# ALG  0.1153204 0.1353557 0.0838225 1.0000000 0.7709303 0.4094324
+# CALC 0.2134271 0.2045215 0.1364251 0.7709303 1.0000000 0.5073147
+# STAT 0.2028315 0.2316288 0.1659747 0.4094324 0.5073147 1.0000000
+# 
+#0.7 and above  - CHEM & BIO, CALC & ALG
+#0.6 and above  - GEO & BIO , CHEM & GEO   -> CHEM,GEO and BIO (factor 1)
+#0.5 and above  - CALC & STAT              -> CALC, ALG and STAT (factor 2)
+
+#To get the eigen values
+dataeigen<-eigen(corMat)
+dataeigen
+
+#Store the eigenvalues in a vector
+values<-dataeigen$values
+values
+
+#eigenvalues : eigenvalues for a given factor measures the variance in all the 
+#variables which is accounted for by that factor
+
+#Get Screeplot
+plot(values,type="lines")
+
+#Get Screeplot
+plot(values,type="b")
+
+#install.packages("psy")
+library(psy)
+scree.plot(corMat)
+
+
+#load the package
+library(mnormt)
+library(psych)
+library(GPArotation)
+
+#use fa() to conduct an oblique principal-axis exploratory factor analysis
+#save the solution to an R variable
+
+solution <- fa(r = corMat, nfactors = 2, rotate = "oblimin", fm = "pa")
+#display the solution output
+solution
+
+# rotate we do to find out which variable will contribute in which factor
+#By looking at our factor loadings, we can begin to assess our factor 
+#solution. We can see that BIO, GEO, and CHEM all have high factor 
+#loadings around 0.8 on the first factor (PA1). Therefore, we might call
+#this factor Science and consider it representative of a student's 
+#interest in science subject matter. Similarly, ALG, CALC, and STAT load 
+#highly on the second factor (PA2), which we might call Math.
+#Note that STAT has a much lower loading on PA2 than ALG or CALC and 
+#that it has a slight loading on factor PA1. This suggests that statistics
+#is less related to the concept of Math than algebra and calculus. Just 
+#below the loadings table, we can see that each factor accounted for 
+#around 30% of the variance in responses, leading to a factor solution 
+#that accounted for 66% of the total variance in students' subject matter
+#preference. Lastly, notice that our factors are correlated at 0.21 and 
+#recall that our choice of oblique rotation allowed for the recognition 
+#of this relationship.
+#Of course, there are many other considerations to be made in developing
+#and assessing an EFA that will not be presented here. 
+
+
+fact.score<-factor.scores(data,solution); fact.score
+factors.values<-fact.score$scores;factors.values
+new_data<-cbind(data,factors.values)
+View(new_data)
+
+
+#When to use factor analysis
+#1. To reduce number variable - if variables are correlated
+#2. To test our assumption related to variables - Principal component analysis
+#3. To remove multicollinearity in regression or model regression
+#multicollinearity  will exit if independent varibales are correlated
+
+
