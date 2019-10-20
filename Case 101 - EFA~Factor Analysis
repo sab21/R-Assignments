@@ -30,7 +30,9 @@ dataeigen
 #Store the eigenvalues in a vector
 values<-dataeigen$values
 values
-
+#2.7867283 1.7777819 0.6304638 0.3366474 0.2621086 0.2062701
+#Number of values greater than 1 gives number of factors
+#here 2 nos are greated than 1 so there can be 2 factor
 #eigenvalues : eigenvalues for a given factor measures the variance in all the 
 #variables which is accounted for by that factor
 
@@ -44,6 +46,15 @@ plot(values,type="b")
 library(psy)
 scree.plot(corMat)
 
+#no of factor (from eigen value grater than 1)
+#rotation: is used to simplify variable slection in factor creation
+#       #orthognal rotation - "varimax" - new variable is perpendicular
+#       #oblique rotation - "oblimin" - new variable(factor) are not perpendicular
+#in case you do not have any idea regarding data - use oblique
+
+#factor method -pa-  Principal Axis - 90% time it is used - for continous data
+#               ml - Maximum liklihood - for ordinal data only(1,2,3/0,1)
+#               Total 9 methods are avialable
 
 #load the package
 library(mnormt)
@@ -56,27 +67,65 @@ library(GPArotation)
 solution <- fa(r = corMat, nfactors = 2, rotate = "oblimin", fm = "pa")
 #display the solution output
 solution
+# Standardized loadings (pattern matrix) based upon correlation matrix
+# PA1   PA2   h2    u2 com
+# BIO   0.86  0.02 0.75 0.255 1.0
+# GEO   0.78  0.05 0.63 0.369 1.0
+# CHEM  0.87 -0.05 0.75 0.253 1.0
+# ALG  -0.04  0.81 0.65 0.354 1.0
+# CALC  0.01  0.96 0.92 0.081 1.0
+# STAT  0.13  0.50 0.29 0.709 1.1
+
+#                       PA1  PA2
+# SS loadings           2.14 1.84
+# Proportion Var        0.36 0.31
+# Cumulative Var        0.36 0.66
+# Proportion Explained  0.54 0.46
+# Cumulative Proportion 0.54 1.00
+
+#With factor correlations of 
+#     PA1  PA2
+#PA1 1.00 0.21
+#PA2 0.21 1.00
+
+#pa1 = w1*Bio + W2*Chem+ W3*Geo
+#pa2 = w4*Bio + W5*Chem+ W6*Geo
+# pa1=0.86*Bio+0.78*Geo+0.87*chem
+# pa2=0.81*Alg+0.96*Calc+0.5*stat
+# these value are not exact weight, but these are used to calculate weight for variables
 
 # rotate we do to find out which variable will contribute in which factor
 #By looking at our factor loadings, we can begin to assess our factor 
-#solution. We can see that BIO, GEO, and CHEM all have high factor 
+#solution.
+
+#We can see that BIO, GEO, and CHEM all have high factor 
 #loadings around 0.8 on the first factor (PA1). Therefore, we might call
 #this factor Science and consider it representative of a student's 
-#interest in science subject matter. Similarly, ALG, CALC, and STAT load 
+#interest in science subject matter. 
+#Similarly, ALG, CALC, and STAT load 
 #highly on the second factor (PA2), which we might call Math.
 #Note that STAT has a much lower loading on PA2 than ALG or CALC and 
 #that it has a slight loading on factor PA1. This suggests that statistics
-#is less related to the concept of Math than algebra and calculus. Just 
-#below the loadings table, we can see that each factor accounted for 
+#is less related to the concept of Math than algebra and calculus. 
+
+#Just below the loadings table, we can see that each factor accounted for 
 #around 30% of the variance in responses, leading to a factor solution 
 #that accounted for 66% of the total variance in students' subject matter
-#preference. Lastly, notice that our factors are correlated at 0.21 and 
+#preference.
+#cumulative variance  - gives percentage variation explained by FA.
+#It should be above 0.5, If it is below 0.5 then REJECT FA result
+
+#Correlation between two  Factors in FA should be weak or 0 - here its 0.21
+#Lastly, notice that our factors are correlated at 0.21 and 
 #recall that our choice of oblique rotation allowed for the recognition 
 #of this relationship.
 #Of course, there are many other considerations to be made in developing
 #and assessing an EFA that will not be presented here. 
 
+#RSMR(root mean sqr of residual) -  should be small. 
+#it gives error in calculating FA
 
+#To get new variable (factor)
 fact.score<-factor.scores(data,solution); fact.score
 factors.values<-fact.score$scores;factors.values
 new_data<-cbind(data,factors.values)
