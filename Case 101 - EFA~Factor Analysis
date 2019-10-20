@@ -65,6 +65,9 @@ library(GPArotation)
 #save the solution to an R variable
 
 solution <- fa(r = corMat, nfactors = 2, rotate = "oblimin", fm = "pa")
+#display plot
+fa.diagram(solution)
+
 #display the solution output
 solution
 # Standardized loadings (pattern matrix) based upon correlation matrix
