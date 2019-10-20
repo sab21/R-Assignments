@@ -1,0 +1,230 @@
+#============================================================
+# Mushroom Data set
+#============================================================
+
+
+mush<-read.csv("C:/Users/acer/Desktop/R Class Assignment/R Part 3 Machine Learning/Support Vector Machine SVM/Case Study/Case 1/mushroom.csv",header = F)
+
+View(mush)
+str(mush)
+names(mush)
+colnames(mush)<-LETTERS[1:23]
+
+
+sapply(mush, function(x) sum(is.na(x)))
+#no misssing value
+
+head(mush)
+table(mush$p)
+# e    p 
+# 4208 3915 
+
+#splitting
+sample.index<-sample(2,nrow(mush),replace = T,prob = c(0.7,0.3))
+train<-mush[sample.index==1,]
+test<-mush[sample.index==2,]
+
+dim(train)
+dim(test)
+head(train)
+
+table(train$p)/nrow(train)
+table(test$p)/nrow(test)
+
+
+library(rpart)
+library(rattle)
+library(rpart.plot)
+library(RColorBrewer)
+
+#building decision tree model
+DT_model<-rpart(A ~ .,data=train,method = "class",control = rpart.control(cp = 0.00001))
+fancyRpartPlot(DT_model)
+
+?rpart
+DT_model#FUPL
+
+#cp - complex parameter is used to check error rate 
+#at various level of decision tree
+
+printcp(DT_model)
+#model validation
+# Predict the values of the test set: pred
+pred <- predict(DT_model, test, type = "class")
+pred
+# Construct the confusion matrix: conf
+conf <- table(test$A, pred)
+conf
+# pred
+    # e    p
+# e 1199    0
+# p    2 1175
+sum(diag(conf))/sum(conf)# 0.9991582
+
+pruned<-prune(DT_model,cp=0.005)
+# Draw pruned
+fancyRpartPlot(pruned)
+printcp(pruned)#FUP
+pred <- predict(pruned, test, type = "class")
+pred
+# Construct the confusion matrix: conf
+conf <- table(test$A, pred)
+conf
+# pred
+#      e    p
+# e 1199    0
+# p    8 1169
+sum(diag(conf))/sum(conf)# 0.996633
+
+
+pruned01<-prune(DT_model,cp=0.01)
+# Draw pruned
+fancyRpartPlot(pruned01)
+printcp(pruned01)#FU
+pred <- predict(pruned01, test, type = "class")
+pred
+# Construct the confusion matrix: conf
+conf <- table(test$A, pred)
+conf
+# pred
+      # e    p
+# e 1199    0
+# p   15 1162
+sum(diag(conf))/sum(conf)# 0.9936869
+
+
+#Random Forest
+library(randomForest)
+RFmodel<-randomForest(A~F+U+P,data=train,n.tree=100,importance=T)
+summary(RFmodel)
+importance(RFmodel)
+plot(RFmodel)
+varImpPlot(RFmodel)
+
+pred<-predict(RFmodel, newdata = test,type = "class")
+conf<-table(test$A,pred)
+conf
+sum(diag(conf))/nrow(test)#0.996633
+
+
+
+#KNN
+library(caret)
+library(e1071)
+
+ktrain<-train
+ktest<-test
+
+
+#ktrain$p<-as.character(train$p)
+str(kktrain)
+#ktest$p<-as.character(test$p)
+
+str(ktrain)
+str(ktest)
+ktrain<-ktrain[-17]
+ktest<-ktest[-17]
+
+
+
+
+
+# Setting up train controls
+repeats = 3
+numbers = 5
+tunel = 5
+
+x = trainControl(method = "repeatedcv",
+                 number = numbers,
+                 repeats = repeats,
+                 classProbs = TRUE,
+                 summaryFunction = twoClassSummary)
+#gridsearchcv in python
+knnModel <- train(A~F+U, data = train, method = "knn",
+                preProcess = c("center","scale"),
+                trControl = x,
+                metric = "ROC",
+                tuneLength = tunel)
+mod<-knn3(A~F+U+P+L,data = train,k = 20)#caret package
+?train
+?trainControl
+knnModel
+summary(knnModel)
+plot(knnModel)
+?train
+# Validation
+
+pred<-predict(mod, newdata = test,type = "prob")
+#Error
+# Error in knn3Train(train = c(-0.15507135508645, -0.15507135508645, -0.15507135508645,  : 
+#                                too many ties in knn 
+conf<-table(test$p,pred)
+conf
+sum(diag(conf))/nrow(test)
+
+
+# Validation
+valid_pred <- predict(knnModel,test, type = "prob")
+
+#Storing Model Performance Scores
+library(ROCR)
+pred_val <-prediction(valid_pred[,2],test$A)
+
+# Calculating Area under Curve (AUC)
+perf_val <- performance(pred_val,"auc")
+auc<-perf_val@y.values[[1]]
+auc
+
+# Plot AUC
+perf_val <- performance(pred_val, "tpr", "fpr")
+plot(perf_val, col = "green", lwd = 1.5)
+
+
+require(class)
+require(caret)
+knn(train = train[c("F","U")], test[c("F","U")] = test, cl = train$A, k = 2, l = 0, prob = T, use.all = F)
+
+
+# install.packages("DMwR")
+# library(DMwR)
+# train$F
+# train$U
+# 
+# pred_K5<-kNN(A~F+U,train,test,norm=T,k=5)
+# 
+# ?kNN
+# table(ktest$p,pred_K5)
+# 
+# head(iris)
+# head(mush)
+
+
+
+# 
+# x <- rep(c("a", "b", "c"), 20)
+# y <- rep(c(1, 1, 0), 20)
+# 
+# class(x)  # -> "character"
+# class(y)  # -> "numeric"
+# 
+# x <- factor(x)
+# y <- factor(y)
+# 
+# class(x)  # -> "factor"
+# class(y)  # -> "factor"
+# 
+# install.packages("varhandle")
+# library(varhandle)
+# x <- unfactor(x)
+# y <- unfactor(y)
+# 
+# class(x)  # -> "character"
+# class(y)  # -> "numeric"
+# 
+# str(mush)
+# 
+
+
+
+?to.dummy()
+dumm
