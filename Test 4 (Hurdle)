@@ -1,0 +1,201 @@
+#R HT  - 2 
+
+# 1. Find Correlation about Score and Television, Score and Exercise, write interpretation of 
+# result obtained. Use score.txt to perform test.
+setwd("C:/Users/acer/Desktop/R Class Assignment/Test/HT2")
+score<-read.table("score.txt",header = T)
+View(score)
+dim(score)
+cor(score$score,score$televesion)# -0.5539036
+#There is strong and negative correlation betweeen score and television
+#i.e score decreases as television increase
+cor.test(score$score,score$televesion)#p-value = 0.001495
+#PValue is less than 0.05, so we reject H0(No correlation)
+
+cor.test(score$score,score$exercises)#p-value = 1.333e-07
+#cor =0.7973315 
+#Since p value is less than 0.05 we reject H0
+#Very stron positive correlation is observed between score and exercise
+
+#So to have more score do more exercise and watch less television
+#===============================xxxxxxxxxxxxxxxxxx=============================
+
+# 2. Create Dataset (dataframe) in R from the Wallmart reg.csv file and perform multivariate 
+# regression analysis to predict custom satisfaction. Test the significance of the test as well.
+wallmart<-read.csv("Wallmart reg.csv")
+View(wallmart)
+dim(wallmart)#200  14
+names(wallmart)
+# [1] "Customer_Satisfaction" "Product_Quality"       "E_Commerce"            "Technical_Support"    
+# [5] "Complaint_Resolution"  "Advertising"           "Product_Line"          "Salesforce_Image"     
+# [9] "Competitive_Pricing"   "Warranty_Claims"       "Packaging"             "Order_Billing"        
+# [13] "Price_Flexibility"     "Delivery_Speed"  
+str(wallmart)
+any(is.na(wallmart))#No Missing values
+#I guess Customer_Satisfaction is target or dependent variable
+fit<-lm(Customer_Satisfaction~.,data = wallmart)
+summary(fit)
+# Multiple R-squared:  0.8042,	Adjusted R-squared:  0.7905 
+cor(wallmart)
+library(corrplot)
+corrplot(cor(wallmart))
+#====================================xxxxxxxxxxxxxxxxxxx===========================
+
+# 3. Create a regression model to predict price of house, and Estimate the price of a 1720 sq ft. 
+# house that has 3 bedrooms, 2 bathrooms and has had 1 offer made on it. Use House_Prices.xls 
+# to from your regression model.
+library(xlsx)
+house<-read.xlsx("House_Prices.xls",sheetName = "Sheet1")
+#house<-read.csv("House_Prices.csv")
+View(house)
+
+house<-house[-1]#Dropping home 
+
+fit<-lm(Price~.,data = house)
+summary(fit)
+#Multiple R-squared:  0.8686 - Can accept the model
+
+#Dropping Brick and Neighbourhood
+newHouse<-house[-c(6,7)]
+fit<-lm(Price~.,data = newHouse)#Multiple R-squared:  0.6982
+summary(fit)
+#Price= -17347.377 + 61.84*Sqft+9319.753*Bedroom+12646.374*Bathroom - 13601.011*offer
+# So for the given the price is
+Price= -17347.377 + 61.84*1720+9319.753*3+12646.374*2 - 13601.011*1
+Price#128668.4
+
+
+
+
+# 4. Create Dataset in R from the Wallmart.csv file and Standard all numeric variables with 
+# mean=0 and sd=1. Perform hierarchical cluster analysis to get 6 cluster with all numeric 
+#variables. Display all these cluster graphically.
+
+
+wallmart<-read.csv("Wallmart.csv")
+View(wallmart)
+str(wallmart)#All  numeric
+wallmart_scale<-scale(wallmart)
+View(wallmart_scale)
+dist_mat<-dist(wallmart_scale)
+hcl<-hclust(dist_mat)
+plot(hcl)
+nc<-cutree(hcl,6)#creating 6 cluster
+table(nc)
+# 1  2  3  4  5  6 
+# 10 92 46 20 28  4 
+new_data<-cbind(wallmart,nc)
+View(new_data)
+
+
+# 5. Perform factor analysis on dataset wallmart (of previous question ) with variables 
+# Product_Quality, E_Commerce, Technical_Support, Complaint_Resolution, Advertising, 
+# Product_Line, Salesforce_Image, Competitive_Pricing, Warranty_Claims, Packaging, 
+# Order_Billing, Price_Flexibility, Delivery_Speed.
+# And get 4 factor from it. Explain the factors that you have created.
+
+#dropping Customer satisfication
+wall<-wallmart[-1]
+View(wall)
+#Taking scaled data as unit of different variables are different
+wall_scale<-scale(wall)
+View(wall_scale)
+corMat<-cor(wall_scale)
+eigen(corMat)$values
+# [1] 3.817302070 2.658723738 1.702699034 1.541740069 0.577707448 0.494854991 0.431111738 0.288865905
+# [9] 0.190278758 0.160086148 0.127831276 0.008798823
+#As per Kaiser Rule total 4 factors can be selected
+
+#loading packages
+library(GPArotation)
+library(mnormt)
+library(psych)
+
+solution<-fa(corMat,nfactors = 4,fm="pa",rotate = "oblimin")
+fa.diagram(solution)
+solution
+# 
+# Standardized loadings (pattern matrix) based upon correlation matrix
+#                        PA1   PA4   PA2   PA3    h2    u2 com
+# Product_Quality       0.15 -0.03 -0.63  0.01 0.430 0.570 1.1
+# E_Commerce           -0.02  0.83 -0.04 -0.02 0.661 0.339 1.0
+# Technical_Support    -0.02 -0.03  0.03  0.92 0.827 0.173 1.0
+# Complaint_Resolution  0.89  0.01  0.04  0.04 0.807 0.193 1.0
+# Advertising           0.12  0.61  0.01 -0.06 0.416 0.584 1.1
+# Product_Line          0.64  0.02 -0.69  0.04 0.893 0.107 2.0
+# Salesforce_Image     -0.01  0.97  0.02  0.03 0.954 0.046 1.0
+# Competitive_Pricing  -0.17  0.16  0.58 -0.02 0.412 0.588 1.3
+# Warranty_Claims       0.02  0.03 -0.02  0.92 0.856 0.144 1.0
+# Packaging             0.17 -0.03 -0.08 -0.04 0.035 0.965 1.6 #It has No Contribution So Packaging can be dropped
+# Order_Billing         0.77  0.06  0.06  0.05 0.640 0.360 1.0
+# Price_Flexibility     0.43  0.03  0.87 -0.02 0.965 0.035 1.5
+# Delivery_Speed        0.97  0.06  0.07  0.01 0.977 0.023 1.0
+
+wall<-wallmart[-c(1,11)]
+corMat2<-cor(scale(wallmart[-c(1,11)]))
+
+solution2<-fa(corMat2,nfactors = 4,fm="pa",rotate = "oblimin")
+fa.diagram(solution2)
+solution2$uniquenesses
+solution2$communality#All variable have communalities above 0.3
+
+solution2
+#                       PA1   PA4   PA2   PA3   h2    u2 com
+# Product_Quality       0.15 -0.03 -0.63  0.02 0.42 0.578 1.1 
+# E_Commerce           -0.02  0.82 -0.04 -0.02 0.66 0.343 1.0
+# Technical_Support    -0.02 -0.03  0.02  0.91 0.81 0.191 1.0
+# Complaint_Resolution  0.89  0.01  0.04  0.03 0.82 0.184 1.0 F1
+# Advertising           0.12  0.61  0.01 -0.06 0.42 0.584 1.1
+# Product_Line          0.65  0.02 -0.69  0.03 0.91 0.095 2.0 
+# Salesforce_Image     -0.02  0.98  0.02  0.03 0.96 0.043 1.0
+# Competitive_Pricing  -0.17  0.16  0.58 -0.02 0.41 0.594 1.3
+# Warranty_Claims       0.02  0.03 -0.01  0.93 0.87 0.126 1.0
+# Order_Billing         0.76  0.06  0.07  0.05 0.64 0.364 1.0 F1
+# Price_Flexibility     0.42  0.03  0.88 -0.02 0.97 0.031 1.4
+# Delivery_Speed        0.97  0.06  0.08  0.01 0.98 0.025 1.0 F1
+# 
+#                       PA1  PA4  PA2  PA3
+# SS loadings           3.03 2.09 2.01 1.71
+# Proportion Var        0.25 0.17 0.17 0.14
+# Cumulative Var        0.25 0.43 0.59 0.74 #Cum Var is above 0.5 
+# Proportion Explained  0.34 0.24 0.23 0.19
+# Cumulative Proportion 0.34 0.58 0.81 1.00
+# 
+# With factor correlations of 
+#     PA1  PA4   PA2   PA3
+# PA1 1.00 0.26  0.01  0.17
+# PA4 0.26 1.00  0.17  0.12
+# PA2 0.01 0.17  1.00 -0.11
+# PA3 0.17 0.12 -0.11  1.00
+# 
+# Mean item complexity =  1.2
+# Test of the hypothesis that 4 factors are sufficient.
+# 
+# The degrees of freedom for the null model are  66  and the objective function was  10.33
+# The degrees of freedom for the model are 24  and the objective function was  1.07 
+# 
+# The root mean square of the residuals (RMSR) is  0.01 
+# The df corrected root mean square of the residuals is  0.02 
+# 
+# Fit based upon off diagonal values = 1
+# Measures of factor score adequacy             
+# PA1  PA4  PA2  PA3
+# Correlation of (regression) scores with factors   0.99 0.98 0.99 0.96
+# Multiple R square of scores with factors          0.99 0.97 0.98 0.92
+# Minimum correlation of possible factor scores     0.97 0.93 0.95 0.84
+
+#Cum Variance is above 0.5 so we can accept the solution
+
+#Developing Factors
+fscore<-factor.scores(wall,solution2)
+scores<-fscore$scores
+newdata<-as.data.frame(scores)
+colnames(newdata)<-c("ComplaintResolution","SalesMarketing","PricingQuality","Warranty")
+View(newdata)
+
+newdata2<-cbind(newdata,wallmart$Customer_Satisfaction)
+View(newdata2)
+#dev lop model
+
+mod<-lm(wallmart$Customer_Satisfaction~.,data = newdata2)
+summary(mod)
