@@ -1,0 +1,139 @@
+#===================================================================================
+#Cases - Age of Death of Successive Kings of England
+#starting with William the Conqueror
+#===================================================================================
+kings<-read.table("C:/Users/acer/Desktop/R Class Assignment/R Part 3 Machine Learning/Time Series Analysis class/KINGS.txt",skip = 3)
+
+
+#Kings data - forecasting age of king at the time of death
+dim(kings)
+#
+#Convert the data into time series format
+kingSeries<-ts(kings)
+help(ts)
+
+#Plot time sereis data to check constant mean
+ts.plot(kings)#No constant mean
+plot(kingSeries)
+mean(kingSeries)#55.28571
+ts.plot(kingSeries)
+
+
+
+#As mean is  not constant so we calculate Kingsseraies 2 with differences 1
+kingSeries2<-diff(kingSeries,differences = 1)
+plot(kingSeries2)
+ts.plot(kingSeries2)
+mean(kingSeries2)# -0.09756098 ~ 0
+#So we can say the mean is constant among intervals so we go with kingseries2
+#otherwise we have to go for more difference
+
+#ARMA(p,d,q)
+#correlogram acf
+acf(kingSeries2)#q=1
+# this will give q value; Here q = 1 (exclude the first one)
+#no of lines crossing blue line is q (exclude first line)
+
+acf(kingSeries2,lag.max = 20) 
+acf(kingSeries2,plot=FALSE,lag.max = 20)
+#as number of points above dotted blue line is 1, q=1
+
+#partial correlogram pacf
+pacf(kingSeries2) # p = 3 (Don't exclude any one)
+#this will give p value
+#no of lines crossing blue line is p
+pacf(kingSeries2,lag.max=20)
+#as number of points above dotted line is 3, p=3
+
+
+
+#ARIMA model is combination of two models - AR and MA
+#ARIMA model has three arguments (p,d,q)
+#p - partial corrologram
+#d= difference to make mean constant
+#q -  corrrologram
+#AR - auto regressive model (p,d) here q is assumed as 0
+#MA - moving average model  (d,q) here p is assumed as 0
+
+#So for KingSeries2
+#Here p = 3,q=1, d= 1(as difference = 1 is taken) for king time series
+#Best model is whose sum of arguments is least.
+#ARIMA(3,1,1) - 5
+#AR(3,1,0)   - 4
+#MA(0,1,1)   - 2 - MA Model Selected
+
+# a model whose sum of argument is least will be selected
+#Moving average model is selected
+
+#For Automatic calculation of (p d q)
+library(astsa)
+library(forecast)
+
+auto.arima(kings)#order= (0,1,1)
+
+#ARIMA(p,d,q) where parameters p, d, and q are non-negative integers, 
+#p is the order (number of time lags) of the autoregressive model, 
+#d is the degree of differencing (the number of times the data have had past values subtracted),
+#and q is the order of the moving-average model.
+
+#X_t - mu = Z_t - (theta * Z_t-1), 
+#where X_t is the stationary time series we are studying (the first differenced series of
+#ages at death of English kings), mu is the mean of time series X_t, 
+#Z_t is white noise with mean zero and constant variance, and 
+#theta is a parameter that can be estimated.
+
+#Building Model
+KingsModel <- arima(kingSeries, order=c(0,1,1))
+KingsModel
+arima(c(0,1,1))
+
+#Automatic model building 
+kauto<-auto.arima(kings)
+
+#for values
+kingsforecasts <- predict(KingsModel, h=5)#h= means we have to predict next h values
+kingsforecasts
+pred<-kingsforecasts$pred[1:5]
+pred
+
+kingsforecastsAuto <- predict(kauto, h=5)#h= means we have to predict next  values
+kingsforecastsAuto#Same as above
+predAuto<-kingsforecastAuto$pred[1:5]
+
+#for plot
+pred_res<-forecast(KingsModel,5)
+pred_res
+plot(pred_res)
+plot(forecast(kauto,h=10))#same
+
+
+#model validation
+ts.plot(KingsModel$residuals) # make time plot of forecast errors
+#a constant residual value makes model acceptable
+#here residual has constant mean
+mean(pred_res$residuals)#0.9712931
+
+#make a correlogram of the forecast errors for our ARIMA(0,1,1) model for the ages at
+#death of kings, and perform the Ljung-Box test for lags 1-20
+acf(pred_res$residuals, lag.max=20)
+
+#box.test is used to test residual =0
+#Let
+#H0: residual-0, H1: Residual not = 0
+Box.test(KingsModel$residuals,lag = 20, type = "Ljung-Box")
+# p-value = 0.8509 ie p >0.05 So we cannot reject H0
+#So we accept H0 ie residual is equal to 0
+
+#So We accept the kingsModel
+
+#------------------------------END of Kings-----------------------------------
+#Time Series Analysis Using ARIMA Model
+#Time Series is used to foreast a numeric variables based on date.
+#Here dependent variable is numeric variables and independent variable is date
+
+#There are few pre-requiste before apply ARIMA on data
+#1. Transform data into Time series format - use ts()
+#2. Data should have constant mean value or mean =0 - use diff()
+#3. There should not be any seasonal effect on data -  use decompose()
+
+#In case of seasonal effect we have to decompose it and subtract seasonal effect from data
