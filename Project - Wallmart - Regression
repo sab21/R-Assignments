@@ -1,0 +1,321 @@
+
+
+# Walmart is a renowned retailing corporation which operates as different types of hypermarket, 
+# departmental stores, grocery stores and garments buying house. For being one of the largest 
+# retail company of the world, they often provide their datasets to public for analysing their
+# information for better taking better decision about their sales. 
+# Requirement:
+# Task:To  Build a regression model for customer satisfaction in the given dataset.
+
+#Importing Data
+wm_raw=read.csv("C:/Users/acer/Desktop/R Class Assignment/Project/Wallmart case/Wallmart.csv")
+
+head(wm_raw)
+View(wm_raw)
+
+data=wm_raw
+
+#Descriptive Stats
+class(data)
+str(data)#All Numeric
+summary(data)
+colnames(data)
+# [1] "Customer_Satisfaction" "Product_Quality"       "E_Commerce"            "Technical_Support"    
+# [5] "Complaint_Resolution"  "Advertising"           "Product_Line"          "Salesforce_Image"     
+# [9] "Competitive_Pricing"   "Warranty_Claims"       "Packaging"             "Order_Billing"        
+# [13] "Price_Flexibility"     "Delivery_Speed" 
+
+
+#Assumptions for Multiple Regression
+#1. Linear between target and features / response and predictor
+#2. Normality of residuals or response variables
+#3. Multicollinearity
+#4. Independece of errors
+#5. Homoscedasticity - constant variability
+
+#Data Cleaning
+#Check for Missing value 
+any(is.na(data))#No missing values in data set
+
+
+#Checking For Outliers
+boxplot(data,las=2,cex.axis=0.5)#las is to make ylabel vertical
+
+#Found oitliers in many features,but thing to  notice is that all the variables values
+#lies within range of 0 to 10. So I believe its rating from 10
+#So We cannot consider them as outliers as they are in beetween their range
+#Outliers may influence but we have to ignore it.
+
+#Visualising Correlation
+cor(data)
+require(corrplot)
+corrplot(cor(data))
+#Many fratures are correalted with each other
+
+#Lets visualise with more detail
+pairs.panels(data[-1],pch=19)
+
+library("PerformanceAnalytics")
+chart.Correlation(data, histogram=TRUE, pch=19)
+#We can clearly visualize that there is linear relationship of customer satisfication
+# with almost each and evry features except Competitive_Pricing
+#
+#Lets visualise without target
+chart.Correlation(data[-1], histogram=TRUE, pch=19)
+#All features are normally distributed except Product Quality
+#Important Correlation above 0.5 or below -0.5
+
+# Product_Quality~Product_Line        0.51
+# E_Commerce~Advertising              0.51
+# E_Commerce~Salesforce_Image         0.79
+# Technical_Support~Warranty_Claims   0.84
+# Complaint_Resolution~Product_Line   0.57
+# Complaint_Resolution~Order_Billing  0.74
+# Complaint_Resolution~Delivery_Speed 0.88
+# Advertising~Salesforce_Image        0.63
+# Order_Billing~Delivery_Speed        0.77
+# Delivery_Speed~Price_Flexibility    0.51
+
+#Note:
+# Competitive_Pricing has negative correlation  w Product_Line(-.48) & Product_Quality(-.45)
+#We witness multicollinearity - need dimesion reduction with help of pca or factor analysis
+
+#Heatmap and hierachical clustering
+col<- colorRampPalette(c("blue", "white", "red"))(20)
+heatmap(cor(data))
+#From dendogram from heatmap we can devide features into 3 to 6 groups
+# For e.g
+#1. Delivery_Speed,Complaint_Resolution,Product_Line
+#2. Warrant_claims,Technical_Support,Packaging,Product_Quality
+#3. E_Commerce,Advertising,Price_Flexibility,Competitive_Pricing
+
+#Lets Conduct T test
+for (i in 2:length(data)) {
+  ttest=t.test(data$Customer_Satisfaction,data[i])
+  message("\n Customer_Satisfaction vs ",colnames(data[i]))
+  message("P value: ",ttest$p.value)
+}
+#So its confirmed All feature except Competitive_Pricing has realtion with target
+# Customer_Satisfaction vs Competitive_Pricing
+# P value: 0.89373412759958
+#So this feature can be deleted,  but for instance we keep it and address it in factor analyis
+
+#Lets attach the data
+attach(data)
+
+#Checking Linear Model 
+model=lm(Customer_Satisfaction~.,data=data)
+summary(model)
+# Residual standard error: 0.5681 on 186 degrees of freedom
+# Multiple R-squared:  0.8042,	Adjusted R-squared:  0.7905 
+# F-statistic: 58.76 on 13 and 186 DF,  p-value: < 2.2e-16
+
+#Lets see the plot
+plot(model)
+#Residual vs fitted looks normal
+#Normal QQ plot have some deviation on lower end due to outliers 
+
+#Model is good, but multicollinearity must be addressed
+#Lets Check vif (variance inflation factor)
+library(faraway)
+vif(model)
+#We have 3 fields where vif >10
+#So it suggest that multicollinearity is affecting the model
+
+
+#Standardising the data
+#Since all the features are rating of having same ranges ie 0 to 10
+# So no need for standardising
+
+#Performing Factor Analysis
+library(mnormt)
+library(psych)
+library(GPArotation)
+library(psy)
+
+corMat=cor(data_scale[-1])
+corrplot(corMat, order = "hclust",tl.col='black', tl.cex=.75)
+
+#Eigen Values
+eigen(corMat)$values
+# [1] 3.835329143 2.675018240 1.721565978 1.543818527 0.969178341 0.574876215 0.489193323 0.421404516
+# [9] 0.288298103 0.190078884 0.154734853 0.127737153 0.008766723
+#By Result we can take minumun 4 factors, or 5 factors if we consider 0.969 as high enough
+
+#Visualising Screee Plot
+plot(eigen(corMat)$values,type="b")
+
+scree.plot(corMat)#psy pacakge
+
+
+#factor analysis
+faSol4<-fa(corMat, nfactors = 4,fm = "pa",rotate = "oblimin")
+
+#Visualisaion
+fa.diagram(faSol4)
+#do the data can be devided into 4 groups, to address our multicolllinearity
+#Packaging is not in any group
+
+faSol4$communality
+# Each features except Packaging has communality above 0.3,
+# Packaging has least 0.034 
+faSol4$uniquenesses
+# Packaging has most 0.965 uniqueness
+# WE cannot drop packkaging as it passed the t test with customer satisfication
+# data leakage may occur by dropping packaging
+
+faSol4 #Cumulative variance 0.68
+
+#Visualising Factors 
+plot(faSol4$loadings,type = "n")
+text(faSol4$loadings,labels=names(data[-1]),cex=.7)
+
+
+#Loading factors into new dataset
+new_data<-data.frame(factor.scores(data[-1],faSol4)$scores)
+dim(new_data)
+
+colnames(new_data)<-c("Delivery", "Sales","Pricing","Service")
+head(new_data)
+
+attach(new_data)
+model=lm(data$Customer_Satisfaction~Delivery+Sales+Pricing+Service)
+
+summary(model)
+# Residual standard error: 0.7646 on 195 degrees of freedom
+# Multiple R-squared:  0.6281,	Adjusted R-squared:  0.6205 
+# F-statistic: 82.33 on 4 and 195 DF,  p-value: < 2.2e-16
+
+#So model's R-sqr reduced drastically below 0.7 which suggest model is not good enough
+
+plot(model)
+#looks normal
+
+
+#Theres is potential of one more factor, so lets do factor analysis with  5 factors 
+faSol5<-fa(corMat,nfactors = 5,rotate = "oblimin",fm="pa")
+
+fa.diagram(faSol5)
+
+
+faSol5$communality
+#Each features has communality above 0.3 except Packaging
+# Packaging has least 0.206 (increased from 4 factors)
+
+faSol5$uniquenesses
+#Again Package uniquness is highest
+
+faSol5 #Cumulative variance 0.71'
+#PA1 and PA5 are correalted by factor 0.45
+
+#Visualising Factors 
+plot(faSol5$loadings,type = "n")
+text(faSol5$loadings,labels=names(data[-1]),cex=.7)
+
+
+#Loading factors into new dataset
+new_data<-data.frame(factor.scores(data[-1],faSol5)$scores)
+dim(new_data)
+
+
+colnames(new_data)<-c("Delivery", "Pricing","Service","Sales","Packaging")
+head(new_data)
+
+model=lm(data$Customer_Satisfaction~Delivery+Sales+Pricing+Service+Packaging)
+
+summary(model)
+# Residual standard error: 0.656 on 194 degrees of freedom
+# Multiple R-squared:  0.7277,	Adjusted R-squared:  0.7207 
+# F-statistic: 103.7 on 5 and 194 DF,  p-value: < 2.2e-16
+
+#So model's R-Sqr increased to 0.7277 whcih suggest model is good enough to be selected
+#So the model can be accepted where we have addressed multicolinearity
+#Each and every features are significant
+model$coefficients
+
+#Lest check all other assumptions 
+plot(model)
+#1. Linearity between errors and fitted looks liitle curve due to outliers
+#2. Normally distributed errors - Normal QQ plot is fine ie errors are normally distributed
+#3. Independence of errors - residual vs fitted graph is scattered hence they are independent
+#4. Homoscedasticity - None found in plot
+#5. Multicollinearity adressed
+
+#Lets clear some outlier
+
+data_out=data[-1]
+
+#Capping out liers to 2.5*stddev
+for (i in 1:length(data_out)) {
+  m=mean(data_out[,i])
+  s=sd(data_out[,i])
+  message(names(data_out[i])," : ",m," , ",round(s,2))
+  print(sum(data_out[,i]>m+2.5*s)+sum(data_out[,i]<m-2.5*s))
+  #uppercap
+  data_out[data_out[,i]>m+2.5*s,i]=m+2.5*s
+  #lowercap
+  data_out[data_out[,i]<m-2.5*s,i]=m-2.5*s
+  print(sum(data_out[,i]>m+2.5*s)+sum(data_out[,i]<m-2.5*s))
+}
+
+#Normalising data
+data_scale=scale(data_out)
+
+
+#Creating factors of 5
+fa5<-fa(cor(data_scale),nfactors = 5,rotate = "oblimin",fm = "pa")
+
+fa.diagram(fa5)
+
+#Creatting dataset from factor analysis
+fa5_data=data.frame(factor.scores(data_scale,fa5)$scores)
+
+colnames(fa5_data)=c("Delivery", "Pricing","Service","Sales","Packaging")
+
+pairs.panels(fa5_data)
+#Prepare MOdel
+attach(fa5_data)
+model_final=lm(data$Customer_Satisfaction~Delivery+Pricing+Service+Sales+Packaging)
+
+summary(model_final)
+# Residual standard error: 0.653 on 194 degrees of freedom
+# Multiple R-squared:  0.7301,	Adjusted R-squared:  0.7232 
+# F-statistic:   105 on 5 and 194 DF,  p-value: < 2.2e-16
+
+#So by addressing outliers we managed to increase R~Sqr to 0.7301 
+plot(model_final)
+#Plot looks normal, passed all the assumptions of regression
+#Residual vs error graph is scattered ad hence linear and independent 
+#From Normal QQ graph it is evident that errors are normally distributed
+#No sign of hoscedasticity appears between residuals and fitted
+
+#Model Validation:
+
+#R-Squared(Expalined Variation)(1-(SSE/SST)) = 0.7301
+#Meaning The model can explain 73.01% of variability
+#Any model having R~Sqr greatertha 0.7 is considered good
+#SSE: Summation of Sqr of errors; Summation(Yi - Y.hat)^2/(n-k-1)
+#SST: Sum of Sqr of Total; Sumation(Yi - mean(Y))^2/(n-k-1)
+#Yi=Y actual
+#mean(y)= Y Mean
+#y hat = Y Predicted
+#n = No of obseravation
+#k = no of features
+#Degree of freedom = dof = n-k-1 = 200-5-1 = 194
+
+
+#Adj R-SQr=0.7232
+#This parameter is important in multiple regression. R~Sqr increases or remain same
+#each time a variable is added in the model.
+#Therefore Adj R-sqr is considered
+#Adj R-Sqr= 1-(SSE/SST)((n-1)/(n-k-1))
+
+#P value of model is very less(less than 0.05), hence model is significant
+
+
+#P value of each and every features is significant
+
+#RMSE = Sqr Root(SSE) = 0.653 (Smaller is better)
+#RMSE can also be called as standard deviation of error
+
+
