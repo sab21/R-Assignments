@@ -1,0 +1,1513 @@
+# Recruit Holiday - Forecasting
+
+# Recruit Holdings has unique access to key datasets that could make automated future 
+# customer prediction possible. Specifically, Recruit Holdings owns Hot Pepper Gourmet 
+# (a restaurant review service), AirREGI (a restaurant point of sales service), and Restaurant 
+# Board (reservation log management software).
+
+# You're challenged to use reservation and visitation data to predict the total number of 
+# visitors to a restaurant for future dates. This information will help restaurants be much 
+# more efficient and allow them to focus on creating an enjoyable dining experience for their 
+# customers.
+
+# air_visit_data.csv: historical visit data for the air restaurants. 
+# This is essentially the main training data set.
+# 
+# air_reserve.csv / hpg_reserve.csv: reservations made through the air / hpg systems.
+# 
+# air_store_info.csv / hpg_store_info.csv: details about the air / hpg restaurants 
+# including genre and location.
+# 
+# store_id_relation.csv: connects the air and hpg ids
+# 
+# date_info.csv: essentially flags the Japanese holidays.
+# 
+# sample_submission.csv: serves as the test set. The id is formed by 
+# combining the air id with the visit date.
+
+# ================1.1 Load Libraries==================
+# general visualisation
+library('ggplot2') # visualisation
+library('scales') # visualisation
+library('grid') # visualisation
+library('gridExtra') # visualisation
+library('RColorBrewer') # visualisation
+library('corrplot') # visualisation
+
+# general data manipulation
+library('dplyr') # data manipulation
+library('readr') # input/output
+library('data.table') # data manipulation
+library('tibble') # data wrangling
+library('tidyr') # data wrangling
+library('stringr') # string manipulation
+library('forcats') # factor manipulation
+
+# specific visualisation
+library('ggrepel') # visualisation
+library('ggridges') # visualisation
+library('ggExtra') # visualisation
+library('ggforce') # visualisation
+library('viridis') # visualisation
+
+# specific data manipulation
+library('lazyeval') # data wrangling
+library('broom') # data wrangling
+library('purrr') # string manipulation
+
+# Date plus forecast
+library('lubridate') # date and time
+library('timeDate') # date and time
+library('tseries') # time series analysis
+library('forecast') # time series analysis
+library('prophet') # time series analysis
+library('timetk') # time series analysis
+
+# Maps / geospatial
+library('geosphere') # geospatial locations
+library('leaflet') # maps
+library('leaflet.extras') # maps
+library('maps') # maps
+
+
+#=====================1.2 Load Datas ===================
+air_visits <- as.tibble(read.csv("C:/Users/acer/Desktop/Python Classnotes/Python Project/Machine Learning Project4/Data/air_visit_data.csv"))
+air_reserve <- as.tibble(read.csv("C:/Users/acer/Desktop/Python Classnotes/Python Project/Machine Learning Project4/Data/air_reserve.csv"))
+hpg_reserve <- as.tibble(read.csv("C:/Users/acer/Desktop/Python Classnotes/Python Project/Machine Learning Project4/Data/hpg_reserve.csv"))
+air_store <- as.tibble(read.csv("C:/Users/acer/Desktop/Python Classnotes/Python Project/Machine Learning Project4/Data/air_store_info.csv"))
+hpg_store <- as.tibble(read.csv("C:/Users/acer/Desktop/Python Classnotes/Python Project/Machine Learning Project4/Data/hpg_store_info.csv"))
+holidays <- tbl_df(read.csv("C:/Users/acer/Desktop/Python Classnotes/Python Project/Machine Learning Project4/Data/date_info.csv"))
+store_ids <- as.tibble(read.csv("C:/Users/acer/Desktop/Python Classnotes/Python Project/Machine Learning Project4/Data/store_id_relation.csv"))
+test <- as.tibble(read.csv("C:/Users/acer/Desktop/Python Classnotes/Python Project/Machine Learning Project4/Data/sample_submission.csv"))
+
+
+# ====================2.Overview ================
+#Air Visit
+#This file contains historical visit data for the air restaurants.
+dim(air_visits) #252108      3
+str(air_visits)
+colnames(air_visits)
+#"air_store_id" - 829factors; "visit_date"- 478factors   "visitors" - int
+#The visit_date should be transformed into a time series format
+air_visits %>% distinct(air_store_id) %>% nrow()
+#829 unique stores
+#Missing Value: 
+sum(is.na(air_visits)) #Nil
+
+
+#Air Reserve - AirREGI / Restaurant Board
+# This file contains reservations made in the air system. Note that the reserve_datetime 
+# indicates the time when the reservation was created, whereas the visit_datetime is the
+# time in the future where the visit will occur
+dim(air_reserve)#92378 rows     4 col
+str(air_reserve)
+colnames(air_reserve)
+#"air_store_id"     "visit_datetime"   "reserve_datetime" "reserve_visitors"
+air_reserve %>% distinct(air_store_id) %>% count()
+#314 unique stores in AirREGI / Restaurant Board (air)
+#Missing Value: 
+sum(is.na(air_reserve)) #Nil
+
+#HPG Reserve -	Hot Pepper Gourmet 
+#This file contains reservations made in the hpg system.
+dim(hpg_reserve)#2000320 rows     4 col
+str(hpg_reserve)
+colnames(hpg_reserve)
+#"hpg_store_id"     "visit_datetime"   "reserve_datetime" "reserve_visitors"
+hpg_reserve %>% distinct(hpg_store_id) %>% count()
+#13325 unique stores in HPG
+#Missing Value: 
+sum(is.na(hpg_reserve)) #Nil
+
+
+#Air Store
+dim(air_store)#829 rows   5 col
+str(air_store)
+colnames(air_store)
+#"air_store_id"   "air_genre_name - 14types" "air_area_name - 103 areas"  "latitude"  "longitude" 
+air_store %>% distinct(air_store_id) %>% count()
+#829 unique stores in HPG
+#Missing Value: 
+sum(is.na(air_store)) #Nil
+
+
+#HPG Store
+dim(hpg_store)#4690 rows   5 col
+str(hpg_store)
+colnames(hpg_store)
+#"hpg_store_id"   "hpg_genre_name - 34type" "hpg_area_name - 119 areas"  "latitude" "longitude" 
+hpg_store %>% distinct(hpg_store_id) %>% count()
+#829 unique stores in HPG
+#Missing Value: 
+sum(is.na(hpg_store)) #Nil
+
+
+#holiday
+dim(holidays)#517 rows   3 col
+str(holidays)
+colnames(holidays)
+#"calendar_date" "day_of_week"   "holiday_flg"   
+table(holidays$holiday_flg)
+#35 holidays in 517 days'
+#Missing Value:
+sum(is.na(holidays)) #Nil
+
+#Store ID
+#This file allows you to join select restaurants that have both the air and hpg system.
+dim(store_ids)#150 rows   2 col
+str(store_ids)
+colnames(store_ids)
+#"air_store_id" "hpg_store_id"  
+#Missing Value:
+sum(is.na(store_ids)) #Nil
+
+
+#Test
+# The test set covers the last week of April and May of 2017. The test set is split
+# based on time (the public fold coming first, the private fold following the public) 
+# and covers a chosen subset of the air restaurants. Note that the test set intentionally 
+# spans a holiday week in Japan called the "Golden Week."
+# There are days in the test set where the restaurant were closed and had no visitors. 
+# These are ignored in scoring. The training set omits days where the restaurants were closed.
+
+dim(test)#150 rows   2 col
+str(test)
+colnames(test)
+#"id"       "visitors"
+#id - is concat of air_store_id and visit date
+#Missing Value:
+sum(is.na(test)) #Nil
+
+#2.2 Reformatting Fetaures
+#We change the formatting of the date/time features and also reformat a few features to
+#logical and factor variables for exploration purposes.
+air_visits <- air_visits %>%
+  mutate(visit_date = ymd(visit_date))
+
+air_reserve <- air_reserve %>%
+  mutate(visit_datetime = ymd_hms(visit_datetime),
+         reserve_datetime = ymd_hms(reserve_datetime))
+
+hpg_reserve <- hpg_reserve %>%
+  mutate(visit_datetime = ymd_hms(visit_datetime),
+         reserve_datetime = ymd_hms(reserve_datetime))
+
+air_store <- air_store %>%
+  mutate(air_genre_name = as.factor(air_genre_name),
+         air_area_name = as.factor(air_area_name))
+
+hpg_store <- hpg_store %>%
+  mutate(hpg_genre_name = as.factor(hpg_genre_name),
+         hpg_area_name = as.factor(hpg_area_name))
+
+holidays <- holidays %>%
+  mutate(holiday_flg = as.logical(holiday_flg),
+         date = ymd(calendar_date))
+
+
+# =================== 3. Feature Visualisation ===============
+
+#3.1 Air Visit
+p1 <- air_visits %>%
+  group_by(visit_date) %>%
+  summarise(all_visitors = sum(visitors)) %>%
+  ggplot(aes(visit_date,all_visitors)) +
+  geom_line(col = "red") +
+  labs(y = "All visitors", x = "Date")
+plot(p1)
+# There is an interesting long-term step structure in the overall time series. 
+# This might be related to new restaurants being added to the data base. 
+# In addition, we already see a periodic pattern that most likely corresponds to a weekly cycle.
+
+
+p2 <- air_visits %>%
+  ggplot(aes(visitors)) +
+  geom_vline(xintercept = 20, color = "red") +
+  geom_histogram(fill = "blue", bins = 30) +
+  scale_x_log10()
+plot(p2)
+#The number of guests per visit per restaurant per day peaks at around 20 (the red line). 
+#The distribution extends up to 100 and, in rare cases, beyond.
+
+  
+p3 <- air_visits %>%
+  mutate(wday = wday(visit_date, label = TRUE)) %>%
+  group_by(wday) %>%
+  summarise(visits = median(visitors)) %>%
+  ggplot(aes(wday, visits, fill = wday)) +
+  geom_col() +
+  theme(legend.position = "none", axis.text.x  = element_text(angle=45, hjust=1, vjust=0.9)) +
+  labs(x = "Day of the week", y = "Median visitors")
+plot(p3)
+#Friday and the weekend appear to be the most popular days; which is to be expected. 
+#Monday and Tuesday have the lowest numbers of average visitors.
+
+p4 <- air_visits %>%
+  mutate(month = month(visit_date, label = TRUE)) %>%
+  group_by(month) %>%
+  summarise(visits = median(visitors)) %>%
+  ggplot(aes(month, visits, fill = month)) +
+  geom_col() +
+  theme(legend.position = "none") +
+  labs(x = "Month", y = "Median visitors")
+plot(p4)
+#Also during the year there is a certain amount of variation. Dec appears to be the most popular 
+#month for restaurant visits. The period of Mar - May is consistently busy.
+
+
+#We will be forecasting for the last week of April plus May 2017, 
+#so let’s look at this time range in our 2016 training data:
+air_visits %>%
+  filter(visit_date > ymd("2016-04-15") & visit_date < ymd("2016-06-15")) %>%
+  group_by(visit_date) %>%
+  summarise(all_visitors = sum(visitors)) %>%
+  ggplot(aes(visit_date,all_visitors)) +
+  geom_line() +
+  geom_smooth(method = "loess", color = "blue", span = 1/7) +
+  labs(y = "All visitors", x = "Date")
+#Here, the black line is the date and the blue line corresponds to a smoothing 
+#fit with a corresponding grey confidence area. We see again the weekly period and 
+#also the impact of the aforementioned Golden Week, 
+#which in 2016 happened between Apr 29 and May 5.
+
+
+#3.2 Air Reservations
+#Let’s see how our reservations data compares to the actual visitor numbers. 
+#We start with the air restaurants and visualise their visitor volume through 
+#reservations for each day, alongside the hours of these visits and the time between 
+#making a reservation and visiting the restaurant:
+foo <- air_reserve %>%
+  mutate(reserve_date = date(reserve_datetime),
+         reserve_hour = hour(reserve_datetime),
+         reserve_wday = wday(reserve_datetime, label = TRUE),
+         visit_date = date(visit_datetime),
+         visit_hour = hour(visit_datetime),
+         visit_wday = wday(visit_datetime, label = TRUE),
+         diff_hour = time_length(visit_datetime - reserve_datetime, unit = "hour"),
+         diff_day = time_length(visit_datetime - reserve_datetime, unit = "day")
+  )
+
+p1 <- foo %>%
+  group_by(visit_date) %>%
+  summarise(all_visitors = sum(reserve_visitors)) %>%
+  ggplot(aes(visit_date, all_visitors)) +
+  geom_line() +
+  labs(x = "'air' visit date")
+plot(p1)
+# There were much fewer reservations made in 2016 through the air system; 
+# even none at all for a long stretch of time. The volume only increased during the end
+# of that year. In 2017 the visitor numbers stayed strong. 
+# The artifical decline we see after the first quarter is most likely related to 
+# these reservations being at the end of the training time frame, 
+# which means that long-term reservations would not be part of this data set.
+
+p2 <- foo %>%
+  group_by(visit_hour) %>%
+  summarise(all_visitors = sum(reserve_visitors)) %>%
+  ggplot(aes(visit_hour, all_visitors)) +
+  geom_col(fill = "blue")
+plot(p2)
+#Reservations are made typically for the dinner hours in the evening.
+
+p3 <- foo %>%
+  group_by(visit_wday) %>%
+  summarise(all_visitors = sum(reserve_visitors)) %>%
+  ggplot(aes(visit_wday, all_visitors)) +
+  geom_col(fill = "blue")
+
+plot(p3)
+##Friday saturday see more visitors
+#Point to note that Sunday see less visitors even from weekdays
+#But in air_visitor Sunday has more median visitor.
+#It seems some of the restaurent are closed on sunday
+
+
+p4 <- foo %>%
+  filter(diff_hour <24*6) %>%
+  group_by(diff_hour) %>%
+  summarise(all_visitors = sum(reserve_visitors)) %>%
+  ggplot(aes(diff_hour, all_visitors)) +
+  geom_col(fill = "blue") +
+  labs(x = "Time from reservation to visit [hours]")
+plot(p4)
+# The time, here shown in hours, between making a reservation and visiting the restaurant 
+# follow a nice 24-hour pattern. The most popular strategy is to reserve a couple of hours
+# before the visit, but if the reservation is made more in advance then it seems to be 
+# common to book a table in the evening for one of the next evenings. This plot is truncated
+# to show this pattern, which continues towards longer time scales. Very long time gaps 
+# between reservation and visit are not uncommon. Those are the most extreme values for 
+# the air data, up to more than a year in advance
+
+p5 <- foo %>%
+  filter(diff_day < 30) %>%
+  group_by(diff_day) %>%
+  summarise(all_visitors = sum(reserve_visitors)) %>%
+  ggplot(aes(diff_day, all_visitors)) +
+  geom_col(fill = "blue") +
+  labs(x = "Time from reservation to visit [hours]")
+plot(p5)
+#Mostly reservation are done on same day 
+
+foo %>%
+  filter(diff_day>365) %>%
+  arrange(desc(diff_day)) %>%
+  select(reserve_datetime, visit_datetime, diff_day, air_store_id) %>%
+  print()
+#Note, that these top 5 only contain 2 different restaurants. Those are either 
+#really fancy places, or maybe these numbers are a result of a data input error 
+#and the year got mixed up.  
+
+#3.3 HPG Reservations
+  
+foo <- hpg_reserve %>%
+  mutate(reserve_date = date(reserve_datetime),
+         reserve_hour = hour(reserve_datetime),
+         visit_date = date(visit_datetime),
+         visit_hour = hour(visit_datetime),
+         diff_hour = time_length(visit_datetime - reserve_datetime, unit = "hour"),
+         diff_day = time_length(visit_datetime - reserve_datetime, unit = "day")
+  )
+
+p1 <- foo %>%
+  group_by(visit_date) %>%
+  summarise(all_visitors = sum(reserve_visitors)) %>%
+  ggplot(aes(visit_date, all_visitors)) +
+  geom_line() +
+  labs(x = "'hpg' visit date")
+plot(p1)
+#Here the visits after reservation follow a more orderly pattern, with a clear spike
+#in Dec 2016. As above for the air data, we also see reservation visits dropping off 
+#as we get closer to the end of the time frame.
+
+p2 <- foo %>%
+  group_by(visit_hour) %>%
+  summarise(all_visitors = sum(reserve_visitors)) %>%
+  ggplot(aes(visit_hour, all_visitors)) +
+  geom_col(fill = "red")
+plot(p2)
+#Again, most reservations are for dinner, and we see another nice 24-hour 
+#pattern for making these reservations.
+
+p3 <- foo %>%
+  filter(diff_hour < 24*10) %>% #for 10 days
+  group_by(diff_hour) %>%
+  summarise(all_visitors = sum(reserve_visitors)) %>%
+  ggplot(aes(diff_hour, all_visitors)) +
+  geom_col(fill = "red") +
+  labs(x = "Time from reservation to visit [hours]")
+plot(p3)  
+#It’s worth noting that here the last few hours before the visit don’t see more volume 
+#than the 24 or 48 hours before. This is in stark constrast to the air data.  
+  
+#3.4  Air Store
+##Interactive Map 
+leaflet(air_store) %>%
+  addTiles() %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addMarkers(~longitude, ~latitude,
+             popup = ~air_store_id, label = ~air_genre_name,
+             clusterOptions = markerClusterOptions())  
+
+#Next, we plot the numbers of different types of cuisine (or air_genre_names) 
+#alongside the areas with the most air restaurants:  
+
+p1 <- air_store %>%
+  group_by(air_genre_name) %>%
+  count() %>%
+  ggplot(aes(reorder(air_genre_name, n, FUN = min), n, fill = air_genre_name)) +
+  geom_col() +
+  coord_flip() +
+  theme(legend.position = "none") +
+  labs(x = "Type of cuisine (air_genre_name)", y = "Number of air restaurants")
+plot(p1)
+#There are lots of Izakaya gastropubs in our data, followed by Cafe’s
+
+p2 <- air_store %>%
+  group_by(air_area_name) %>%
+  count() %>%
+  ungroup() %>%
+  top_n(15,n) %>%
+  ggplot(aes(reorder(air_area_name, n, FUN = min) ,n, fill = air_area_name)) +
+  geom_col() +
+  theme(legend.position = "none") +
+  coord_flip() +
+  labs(x = "Top 15 areas (air_area_name)", y = "Number of air restaurants")
+plot(p2)
+#Fukuoka has the largest number of air restaurants per area, followed by many Tokyo areas.
+
+
+#3.5 HPG Store
+#Interactive Map
+leaflet(hpg_store) %>%
+  addTiles() %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addMarkers(~longitude, ~latitude,
+             popup = ~hpg_store_id, label = ~hpg_genre_name,
+             clusterOptions = markerClusterOptions())   
+  
+  
+#Nextn genre and area wise plot for hpg
+p1<-hpg_store %>%
+  group_by(hpg_genre_name) %>%
+  count() %>%
+  ggplot(aes(reorder(hpg_genre_name,n,FUN = min),n,fill = hpg_genre_name)) +
+  geom_col() +
+  coord_flip() + 
+  theme(legend.position = "none") +
+  labs(x = "Type of cuisine (hpg_genre_name)", y = "Number of hpg restaurants")
+
+plot(p1)  
+#The hpg description contains a larger variety of genres than in the air data. #
+#Here, “Japanese style” appears to contain many more places that are categorised 
+#more specifically in the air data. The same applies to “International cuisine”.
+
+p2<-hpg_store %>%
+  group_by(hpg_area_name) %>%
+  count() %>%
+  ungroup() %>%
+  top_n(15,n) %>% 
+  ggplot(aes(reorder(hpg_area_name,n,FUN=min),n,fill=hpg_area_name))+
+  geom_col() +
+  coord_flip()+
+  theme(legend.position = "none")+
+  labs(x = "Top 15 areas (air_area_name)", y = "Number of air restaurants")
+
+plot(p2)
+#In the top 15 area we find again Tokyo and Osaka to be prominently present.
+
+
+#3.6 Holidays
+foo <- holidays %>%
+  mutate(wday = wday(date))
+
+table(foo$holiday_flg)
+table(foo$holiday_flg)/nrow(foo)
+#FALSE     TRUE 
+#93.23%    6.77% 
+#482       35
+
+p1 <- foo %>%
+  ggplot(aes(holiday_flg, fill = holiday_flg)) +
+  geom_bar() +
+  theme(legend.position = "none")
+plot(p1)
+#35 holidays in data consisting 6.77%
+
+p2 <- foo %>%
+  filter(date > ymd("2016-04-15") & date < ymd("2016-06-01")) %>%
+  ggplot(aes(date, holiday_flg, color = holiday_flg)) +
+  geom_point(size = 2) +
+  theme(legend.position = "none") +
+  labs(x = "2016 date")
+plot(p2)
+
+
+p3 <- foo %>%
+  filter(date > ymd("2017-04-15") & date < ymd("2017-06-01")) %>%
+  ggplot(aes(date, holiday_flg, color = holiday_flg)) +
+  geom_point(size = 2) +
+  theme(legend.position = "none") +
+  labs(x = "2017 date")
+plot(p3)
+#The same days were holidays in late Apr / May in 2016 as in 2017.
+#29Apr, 3rd 4th 5th MAy 
+
+
+# ================4.1 visistors per Genre===============
+foo<-air_visits %>%
+  left_join(air_store,by = "air_store_id")
+
+colnames(foo)
+
+foo %>%
+  group_by(visit_date,air_genre_name) %>%
+  summarise(mean_visitors=mean(visitors)) %>%
+  ungroup() %>%
+  ggplot(aes(visit_date,mean_visitors,color=air_genre_name))+
+  geom_line()+
+  labs(y = "Average number of visitors to 'air' restaurants", x = "Date") +
+  theme(legend.position = "none") +
+  scale_y_log10() +
+  facet_wrap(~ air_genre_name)
+
+# The mean values range between 10 and 100 visitors per genre per day. Within each category, 
+# the long-term trend looks reasonably stable. There is an upward trend for “Creative Cuisine” 
+# and “Okonomiyaki” et al., while the popularity of “Asian” food has been declining since 
+# late 2016.
+
+# The low-count time series like “Karaoke” or “Asian” or "International" are  more 
+# noisy than the genres with higher numbers of visitors. Still, “Asian” restaurants appear 
+# to be very popular despite their rarity.
+
+foo %>%
+  group_by(air_genre_name) %>%
+  summarise(total_visitors=sum(visitors)) %>%
+  ggplot(aes(reorder(air_genre_name,total_visitors,FUN=min),total_visitors,fill=air_genre_name))+
+  geom_col()+
+  coord_flip()+
+  theme(legend.position = "none")+
+  labs(x="Air Genre Name", y="Total Visistors")
+#Izakaya has largest visitor of all followed by cafe/sweets and Italian/French as obvious 
+#their numbers are high in terms of restaurent count
+#Aisan Karoake and Intrenational are least visitors
+
+head(foo)
+foo %>%
+  mutate(wkd= wday(visit_date,label=T)) %>%
+  group_by(wkd,air_genre_name) %>%
+  summarise(mean_visitors=mean(visitors)) %>%
+  ungroup() %>%
+  ggplot(aes(wkd,mean_visitors,fill=wkd))+
+  geom_col()+
+  theme(legend.position = "none") +
+  facet_wrap(~ air_genre_name)+
+  labs(x="WeekDays")
+# The biggest difference between weekend and weekdays exists for the “Karaoke” bars, 
+# which rule the weekend. A similar trend, although with a considerably smaller gap, 
+# can be seen for the “International” cuisine.
+
+
+foo %>%
+  ggplot(aes(visitors,fill=air_genre_name))+
+  geom_density()+
+  scale_x_log10()+
+  theme(legend.position = "none")+
+  facet_wrap(~ air_genre_name)
+#The density curves confirm the impression we got from the week-day distribution: 
+#the “Asian” restaurants have rarely less than 10 visitors per date and the “Karaoke”
+#places show a very broad distribution due to the strong impact of the weekends. 
+#Note the logarithmic x-axis.
+
+str(foo)
+#4.2 The impact of holidays
+foo<-air_visits %>%
+  mutate(calendar_date =as.character(visit_date)) %>%
+  left_join(holidays,by = "calendar_date")
+
+str(foo)
+str(air_reserve) 
+foo %>%
+  ggplot(aes(holiday_flg,visitors, color=holiday_flg))+
+  geom_boxplot()+
+  scale_y_log10()+
+  theme(legend.position ="none")
+  
+#Overall, holidays don’t have any impact on the average visitor numbers. 
+
+foo %>%
+  mutate(wdy=wday(date,label = T)) %>%
+  group_by(wdy,holiday_flg) %>%
+  summarise(mean_visitors=mean(visitors)) %>%
+  ggplot(aes(wdy,mean_visitors,color=holiday_flg))+
+  geom_point(size=5)
+#While a weekend holiday has little impact on the visitor numbers, and even decreases them
+#slightly 
+#there is a much more pronounced effect for the weekdays; especially Monday and Tuesday
+
+
+bar<-air_store %>%
+  left_join(foo,by = "air_store_id") %>%
+  mutate(wdy=wday(date,label = T))
+str(bar)
+
+bar %>%
+  group_by(air_genre_name,holiday_flg) %>%
+  summarise(mean_visitors=mean(visitors)) %>%
+  ggplot(aes(air_genre_name,mean_visitors,color=holiday_flg))+
+  geom_point(size=5)+
+  coord_flip()
+#Karaoke- during holidays it gained double from non holiday
+#Korean food have no visitors on holiday
+#All other genre gained little or  more except Intrenational
+#So we can ignore impact of holiday in all the genre except "Karaoke"
+
+bar %>%
+  #filter(air_genre_name=="Karaoke/Party") %>%
+  group_by(air_genre_name,wdy,holiday_flg) %>%
+  summarise(mean_visitors=mean(visitors)) %>%
+  ggplot(aes(wdy,mean_visitors,color=holiday_flg))+
+  geom_point(size=3)+
+  facet_wrap(~air_genre_name)
+#Asian: significant gain if holiday fall on Monday otherwise none; Tuesday off for holiday
+#Bar: No significant gain; saturday closed unless its holiday 
+#Cafe: Little gain if holiday fall on weekdays
+#Creative: slight gain if holiday on Monday; Wed Closed unless its holiday
+#Dining: No significant gain;Wed Closed unless its holiday
+#International:Nope; Tue closed if its holiday
+#Italian: Nope
+#Izkaya: Nope
+#Japanese: Nope; Sat Closed unless its holiday
+#Karaoke: Significant gain if holiday fall on Thu or Fri <<<<<<significant<<<<<<<<
+#Monja: Nope
+#Other: Nope; Sat Closed unless its holiday
+#Western: Nope
+#Korean: Nope
+
+bar %>%
+  filter(air_genre_name=="Karaoke/Party")  %>%
+  group_by(air_store_id,air_area_name) %>%
+  summarise(s=sum(visitors))
+
+#air_7514d90009613cd6,air_c8fe396d6c46275d are two store ids for karaoke on same
+#area of Tokyo
+
+
+# ==================== 4.3 Genre per Area ========================
+#4.3.1 Air Store Data
+str(air_store)
+air_store %>% 
+  mutate(area=str_sub(air_area_name,1,10)) %>% #count(area) %>% distinct()
+  ggplot(aes(area,air_genre_name)) +
+  geom_count(colour = "blue") +
+  theme(legend.position = "bottom", axis.text.x  = element_text(angle=90, hjust=1, vjust=0.9))
+
+#Tokyo has lagest number and variety of restaurent almost all type except Karaoke
+#Asian and International are present only in Tokyo 
+#Karaoke present only in Hokkaida
+#Western food present only in Hokkaida nad Tokyo
+# “Izakaya” or “Cafe” are pretty ubiqutous
+
+
+air_store %>%
+  group_by(air_genre_name,air_area_name) %>%
+  count()%>%
+  ggplot(aes(reorder(air_genre_name,n,FUN=mean),n))+
+  geom_boxplot()+
+  scale_y_log10()+
+  geom_jitter(color="blue")+
+  coord_flip()+
+  labs(x="Genre Name",y="Occurance per area")
+
+#For the majority of genres the distribution is firmly clustered around 2 cases 
+#per area with a bit of scatter towards higher numbers.
+air_store[air_store$air_genre_name=="Cafe/Sweets",] %>%
+  group_by(air_area_name) %>% tally() %>% arrange(desc(n))
+#"Fukuoka-ken Fukuoka-shi DaimyÅ\u008d" has max no of restaurent (26) for "Cafe"
+
+#Curiously, the minimum here is 2, not 1.
+#This means that there is no air restaurant that is the only one of it’s genre in any area
+#Lets check for duplicacy
+air_store  %>%
+  filter(air_store_id %in% c("air_b5598d12d1b84890","air_bbe1c1a47e09f161"))
+#Both restaurent have same location but different store Id
+air_visits  %>%
+  filter(air_store_id %in% c("air_b5598d12d1b84890","air_bbe1c1a47e09f161")) %>%
+  arrange(visit_date)
+#No dupliacy found as they have different number of visitors
+
+#Distribution Plot
+air_store  %>%
+  group_by(air_genre_name,air_area_name) %>%
+  count() %>%
+  ggplot(aes(n))+
+  geom_histogram(fill="blue",binwidth = 1)+
+  xlab("Air Genre per Area")
+#The numbers of cases of identical genres in the same area drops, from the maximum
+#of “2”for air.
+
+#4.3.2 HPG store
+hpg_store %>%
+  mutate(area=str_sub(hpg_area_name,1,8)) %>%
+  ggplot(aes(area,hpg_genre_name))+
+  geom_count(color="red")+
+  theme(legend.position = "bottom",axis.text.x = element_text(angle = 90,hjust = 1,vjust = 0.9))
+  
+#Tokyo features prominently in the areas with a lot of culinary diversity.
+#“Japanese style” and “International cuisine” are popular pretty much everywhere.
+#“Amusement bars” and “Udon/Soba” places are rare, 
+#as are “Shanghai food” or “Dim Sum”.
+
+hpg_store %>%
+  group_by(hpg_genre_name,hpg_area_name) %>%
+  count() %>%
+  ggplot(aes(reorder(hpg_genre_name,n,FUN=mean),n))+
+  geom_boxplot()+
+  geom_jitter(color="red")+
+  scale_y_log10()+
+  coord_flip()+
+  labs(x="Genre Name",y="Occurance Per Area")+
+  theme(legend.position = "none")
+
+#Here we clearly have a minimum of 1 genre per area, 
+#and also much more variety in median cases due to the higher overall numbers.  
+
+#Distribution Plot
+hpg_store %>%
+  group_by(hpg_genre_name,hpg_area_name) %>%
+  count() %>%
+  ggplot(aes(n))+
+  geom_histogram(fill="red",binwidth = 1)+
+  xlab("HPG Genre Per Area")
+#The numbers of cases of identical genres in the same area drops quickly, 
+#possibly exponentially,  “1” for  hpg data sets  
+  
+
+air_visits %>%
+  left_join(air_store,by = "air_store_id") %>%
+  group_by(air_genre_name,air_area_name) %>%
+  summarise(mean_visitors=mean(visitors)) %>%
+  ggplot(aes(mean_visitors)) +
+  geom_histogram(fill="blue",binwidth = 1)+
+  ylab("Air Genre Per Area Count")
+#Plot is normally distributed as usual
+#There are instances where no of visitor went more than 60 for
+#one genre per area
+#Lets see which area is that
+air_visits %>%
+  left_join(air_store,by = "air_store_id") %>%
+  group_by(air_genre_name,air_area_name) %>%
+  summarise(mean_visitors=mean(visitors)) %>%
+  arrange(desc(mean_visitors))
+# Okonomiyaki/Monja/Teppany~ "TÅ\to Shibuya-ku Shibuya"          60.8
+
+
+# ============= 4.4 Reservations vs Visits ===================
+##Air Data
+str(air_reserve)
+
+air_reserve %>%
+  mutate(visit_date=date(visit_datetime))  %>%
+  group_by(air_store_id,visit_date)  %>%
+  summarise(air_reserve_visitor=sum(reserve_visitors))  %>%
+  filter(air_reserve_visitor<250) %>% #there are instance where resrvation is made for 1500 but didn't show up
+  inner_join(air_visits,by = c("air_store_id","visit_date")) %>%
+  ggplot(aes(air_reserve_visitor,visitors))+
+  geom_point(color="black",alpha=0.5)+
+  geom_abline(slope = 1,intercept = 0,color="red")+
+  geom_smooth(method = "lm",color="blue")+
+  ylab("Actual Visitors")
+
+
+#Lets Add HPG Data here as we know many air store are also in hpg
+
+str(hpg_reserve)
+str(store_ids)
+
+foo<-hpg_reserve %>%
+  mutate(visit_date=date(visit_datetime)) %>%
+  group_by(hpg_store_id,visit_date) %>%
+  summarise(hpg_reserve_visitor=sum(reserve_visitors)) %>%
+  inner_join(store_ids,by = "hpg_store_id")
+
+all_reserve<-air_reserve %>%
+  mutate(visit_date=date(visit_datetime))  %>%
+  group_by(air_store_id,visit_date)  %>%
+  summarise(air_reserve_visitor=sum(reserve_visitors))  %>%
+  left_join(foo,by = c("air_store_id","visit_date")) %>%
+  mutate(all_reserve_visitor=air_reserve_visitor+ hpg_reserve_visitor) %>%
+  #filter(all_reserve_visitor<250) %>% #there are instance where resrvation is made for 1500 but didn't show up
+  inner_join(air_visits,by = c("air_store_id","visit_date"))
+
+p<-all_reserve %>%
+  filter(all_reserve_visitor<250) %>% #there are instance where resrvation is made for 1500 but didn't show up
+  ggplot(aes(all_reserve_visitor,visitors))+
+  geom_point(color="black",alpha=0.5)+
+  geom_abline(slope = 1,intercept = 0,color="red")+
+  geom_smooth(method = "lm",color="blue")+
+  ylab("Actual Visitors")
+ggMarginal(p,type = "histogram",fill="blue",bins=50)
+#The histograms show that the reserve_visitors and visitors numbers peak below ~20 
+#and are largely confined to the range below 100.
+#The scatter points fall largely above the red line of identity, indicating that 
+#there were more visitors that day than had reserved a table. 
+#This is not surprising, since a certain number of people will always be walk-in customers
+
+#A notable fraction of the points is below the line, which probably indicates 
+#that some people made a reservation but changed their mind and didn’t go
+
+#The linear fit suggests a trend in which larger numbers of reserve_visitors are 
+#more likely to underestimate the eventual visitor numbers. 
+#(a) a large reservation is cancelled than 
+#(b) a large group of people walk in a restaurant without reservation.
+
+#===4.5 impact of holidays on the discrepancy between reservations and visitors.====
+all_reserve %>%
+  mutate(date = visit_date) %>%
+  inner_join(holidays, by = "date") %>%
+  ggplot(aes(visitors - all_reserve_visitor, fill = holiday_flg)) +
+  geom_density(alpha = 0.5)
+#There are somewhat higher numbers of visitors compared to reservations on a holiday. 
+#The peaks are almost identical, but we see small yet clear differences towards larger numbers
+
+
+# =============== 5.FORECASTING ============================
+# ================5.1 AUTO ARIMA ===============================
+#ARIMA - autoregressive integrated moving average model
+#three indeces p, d, q as ARIMA(p, d, q)
+#auto-regressive / p: 
+  #we are using past data to compute a regression model for future data. 
+  #The parameter p indicates the range of lags; e.g. ARIMA(3,0,0) 
+  #includes t-1, t-2, and t-3 values in the regression to compute the value at t.
+#integrated / d: 
+  #this is a differencing parameter, which gives us the number of times we are
+  #subtracting the current and the previous values of a time series. 
+  #Differencing removes the change in a time series in that it stabilises the 
+  #mean and removes (seasonal) trends.
+# moving average / q: 
+#   this parameter gives us the number of previous error terms to include in 
+#   the regression error of the model.
+
+#Will use AUTO.ARIMA tool
+#tsclean will be used to clean outliers
+
+#We use the first air_store_id (“air_ba937bf13d40fb24”) as an example.
+
+air_id = "air_ba937bf13d40fb24"
+
+#In order to test our prediction, we will forecast for an identical time frame 
+#as we are ultimately tasked to predict (Apr 23th - May 31st). 
+#Here we automatically extract these 39 days from the length of the test 
+#prediction range and define it as our “prediction length”.
+str(test)
+View(test)
+pred_len<- test %>%
+  separate(id,c("air","store_id","date"),sep = "_")  %>%
+  distinct(date)  %>%
+  nrow()
+pred_len
+#We choose to predict for the last 39 days of our training sample
+
+#We also create a data set of all visit_dates in preparation for many time series having gaps.
+
+max_date <- max(air_visits$visit_date)
+
+split_date <- max_date - pred_len
+
+all_visits <- tibble(visit_date = seq(min(air_visits$visit_date), 
+                                      max(air_visits$visit_date), 1))
+
+tail(all_visits)
+
+#Next, we extract the time series for the specific air_store_id.
+
+str(air_visits)
+
+foo<-air_visits %>%
+  filter(air_store_id==air_id)
+
+#creating dataset without any gap and
+#converting visitor to log(visitor)
+visits<-foo  %>%
+  right_join(all_visits,by = "visit_date") %>%
+  mutate(wkday=wday(visit_date),
+         visitors=log1p(visitors)) %>%
+  rownames_to_column()
+
+#replacing NAs with daywise median data
+for (i in 1:7) {
+  x<-median(visits$visitors[visits$wkday==i],na.rm = T)
+  visits$visitors[visits$wkday==i&is.na(visits$visitors)]=x 
+}
+
+#Visualisation of time series
+ts.plot(ts(visits$visitors,frequency = 366,start = c(2016,1)),
+        ylab="log(visitors)",main="Time Series")#In year
+ts.plot(ts(visits$visitors,frequency = 7),
+        xlab="Week",ylab="log(visitors)",main="Time Series (Weekly)")#Weekly
+#We see weekly cycle as obvious
+#Decompose data into three part - trends, seasonal, randomness
+plot(decompose(ts(visits$visitors,frequency = 7)),
+     xlab="Week",ylab="log(visitors)")
+#Plot after removing seasonal
+plot(ts(visits$visitors,frequency = 7)-
+       decompose(ts(visits$visitors,frequency = 7))$seasonal,
+     xlab="Week",ylab="log(visitors)",main="TS without Seasonal Effect")
+
+#Using this new time series, we now split the data into training and validation sets
+visits_train <- visits %>% filter(visit_date <= split_date)
+
+visits_valid <- visits %>% filter(visit_date > split_date)
+
+#Model Fitting
+#Auto Arima 
+#tsclean() to deal with outliers
+#We also add the weekly frequency
+#The stepwise and approximation parameter settings mean that the tool performs 
+#a more thorough and precise search over all model parameters
+
+
+arima.fit<-auto.arima(tsclean(ts(visits_train$visitors,frequency = 7)),
+                      stepwise = F,approximation = F)
+
+plot(arima.fit$residuals)
+print(Box.test(arima.fit$residuals,type = "Ljung-Box")$p.value)
+#pValue is greater than 0.05 , therefore Reject H0
+#ie mean of residual = 0 ; We accept the model
+
+
+#Using the fitted ARIMA model we will forecast for our “prediction length”. 
+#We include confidence intervals.
+#arima.fit
+arima_visits<-arima.fit %>% forecast(h=pred_len,level=c(50,95))
+
+# Plotting Model
+# Actual are in black
+# The predicted visitor counts are shown in dark blue, 
+# with the lighter blues indicating the confidence ranges. 
+# We also add the real validation counts in grey:
+  
+arima_visits %>%
+  autoplot +
+  geom_line(aes(as.integer(rowname)/7, visitors), 
+            data = visits_valid, color = "grey40") +
+  labs(x = "Time [weeks]", y = "log1p visitors vs auto.arima predictions")
+
+#Forecasting is perfect , lower and upper spikes are captured.
+
+#Lets Check The errors
+predicted<-predict(arima.fit,pred_len)$pred
+error<-visits_valid$visitors-predicted
+MSE=sum((error)^2)/pred_len
+RMSE=sqrt(MSE)
+MAE=sum(abs(error))/pred_len
+MASE=sum(abs(scale(error)))/pred_len
+message("MSE:",MSE," RMSE:",RMSE," MAE:",MAE," MASE:",MASE)
+#Satisfactory results
+
+#Lets turn the whole procedure into function:
+#==================5.2 AUTO ARIMA Function  ==========================
+plot_auto_arima_air_id<-function(air_id){
+  
+  #finding the length for prediction
+  pred_len<- test %>%
+    separate(id,c("air","store_id","date"),sep = "_")  %>%
+    distinct(date)  %>%
+    nrow()
+  
+  #Creating dataset to from start date to end date to fill the gap
+  max_date<-max(air_visits$visit_date)
+  split_date<-max_date-pred_len
+  all_visits<-tibble(visit_date=seq(min(air_visits$visit_date),
+                                    max(air_visits$visit_date),1))
+  
+  #Creating data set for required air store ID
+  foo<-air_visits %>%
+    filter(air_store_id==air_id)
+  
+  #creating dataset without any gap and
+  #converting visitor to log(visitor)
+  visits<-foo  %>%
+    right_join(all_visits,by = "visit_date") %>%
+    mutate(wkday=wday(visit_date),
+           visitors=log1p(visitors)) %>%
+    rownames_to_column()
+  
+  #Filling NA with weekdays median value
+  for (i in 1:7) {
+    x<-median(visits$visitors[visits$wkday==i],na.rm = T)
+    visits$visitors[visits$wkday==i&is.na(visits$visitors)]=x 
+  }
+  
+  #Creating Train and Test data set
+  visits_train <- visits %>% filter(visit_date <= split_date)
+  visits_valid <- visits %>% filter(visit_date > split_date)
+  
+  
+  #Model Fitting
+  #Auto Arima 
+  #tsclean() to deal with outliers
+  #We also add the weekly frequency
+  #The stepwise and approximation parameter settings mean that the tool performs 
+  #a more thorough and precise search over all model parameters
+  
+  arima.fit<-auto.arima(tsclean(ts(visits_train$visitors,frequency = 7)),
+                        stepwise = F,approximation = F)
+  
+  #Visualise residual
+    #plot(arima.fit$residuals)
+  #Model validation 
+    #print(Box.test(arima.fit$residuals,type = "Ljung-Box")$p.value)
+  
+  #Lets Check The errors
+    #predicted<-predict(arima.fit,pred_len)$pred
+    #error<-visits_valid$visitors-predicted
+    #MSE=sum((error)^2)/pred_len
+    #RMSE=sqrt(MSE)
+    #MAE=sum(abs(error))/pred_len
+    #MASE=sum(abs(scale(error)))/pred_len
+    #message("MSE:",MSE," RMSE:",RMSE," MAE:",MAE," MASE:",MASE)
+  
+  #Using the fitted ARIMA model we will forecast for our “prediction length”. 
+  #We include confidence intervals.
+  arima_visits<-arima.fit %>%
+    forecast(h=pred_len,level=c(50,95))
+  
+  # Plotting Model
+  # Actual are in black
+  # The predicted visitor counts are shown in dark blue, 
+  # with the lighter blues indicating the confidence ranges. 
+  # Real validation counts in grey:
+  
+  arima_visits  %>%
+    autoplot()+
+    geom_line(aes(as.integer(rowname)/7,visitors),data=visits_valid,
+              color="grey40")+
+    labs(x = "Time [weeks]", y = "log visitors vs forecast")
+  
+}
+
+#=================== 5.2.1 Calling Auto Arima Function ====================
+
+#Calling function to a few time series
+plot_auto_arima_air_id("air_f3f9824b7d70c3cf")
+plot_auto_arima_air_id("air_8e4360a64dbd4c50")
+#Lest check with Karaoke store Ids
+plot_auto_arima_air_id("air_7514d90009613cd6")
+plot_auto_arima_air_id("air_c8fe396d6c46275d")
+air_visits %>% group_by(air_store_id) %>% 
+  summarise(s=sum(visitors)) %>% arrange(desc(s))
+plot_auto_arima_air_id("air_399904bdb7685ca0")
+
+#Some time ARIMA able to capture the spikes some time it fails,
+#Overall for base line its performance is good in terms of error
+
+
+# #=======================   5.2 PROPHET   ========================================
+# Prophet utilises an additive regression model which decomposes a time series into 
+# (i) a (piecewise) linear/logistic trend, 
+# (ii) a yearly seasonal component, 
+# (iii) a weekly seasonal component, and 
+# (iv) an optional list of important days (such as holidays, special events, …). 
+# It claims to be “robust to missing data, shifts in the trend, and large outliers”. 
+# Especially the missing data functionality could be useful in this competition.
+# 
+# Let’s again explore the tool step by step. We will build on our work in the ARIMA 
+# section and won’t repeat any explanations that can be found there.
+
+# We will again create a training and validation set for the same periods as above
+# We don’t need to replace NA values because prophet knows how to handle those.
+# Prophet expects a data frame with two columns: ds for the dates and y for 
+# the time series variable.
+
+air_id = "air_ba937bf13d40fb24"
+
+pred_len <- test %>%
+  separate(id, c("air", "store_id", "date"), sep = "_") %>%
+  distinct(date) %>%
+  nrow()
+
+max_date <- max(air_visits$visit_date)
+
+split_date <- max_date - pred_len
+
+all_visits <- tibble(visit_date = seq(min(air_visits$visit_date), max(air_visits$visit_date), 1))
+
+
+foo <- air_visits %>%
+  filter(air_store_id == air_id)
+
+
+visits <- foo %>%
+  right_join(all_visits, by = "visit_date") %>%
+  mutate(y = log1p(visitors),
+         ds=visit_date)
+
+visits<-visits[,4:5]
+
+
+visits_train <- visits %>% filter(ds <= split_date)
+
+visits_valid <- visits %>% filter(ds > split_date)
+
+# Here we fit the prophet model and make the forecast:
+# the parameter changepoint.prior.scale adjusts the trend flexibility. 
+# Increasing this parameter makes the fit more flexible, but also increases the 
+# forecast uncertainties and makes it more likely to overfit to noise. 
+# The changepoints in the data are automatically detected unless being specified 
+# by hand using the changepoints argument (which we don’t do here).
+# 
+# the parameter yearly.seasonality has to be enabled/disabled explicitely and 
+# allows prophet to notice large-scale cycles. We have barely a year of data here, 
+# which is definitely insufficient to find yearly cycles and probably not enough to
+# identify variations on the time scales of months. Feel free to test the performance
+# of this parameter.
+
+proph <- prophet(visits_train, changepoint.prior.scale=0.5, yearly.seasonality=FALSE)
+
+future <- make_future_dataframe(proph, periods = pred_len)
+
+fcast <- predict(proph, future)
+#This is the standard prophet forecast plot:
+plot(proph, fcast)
+
+# The observed data are plotted as black points and the fitted model, plus forecast,
+# as a blue line. In light blue we see the corresponding uncertainties.
+# 
+# Prophet offers a decomposition plot, where we can inspect the additive 
+# components of the model: trend, yearly seasonality (if included), and weekly cycles:
+
+prophet_plot_components(proph, fcast)
+#Prophet detects a weekly variation pattern which is similar to what we had found before, \
+#in that Fri/Sat are more popular than the rest of the week.
+
+#Validation Plot
+fcast %>%
+  as.tibble() %>%
+  mutate(ds = date(ds)) %>%
+  ggplot(aes(ds, yhat)) + 
+  geom_ribbon(aes(x = ds, ymin = yhat_lower, ymax = yhat_upper), fill = "light blue") +
+  geom_line(colour = "blue") +
+  geom_line(data = visits_train, aes(ds, y), colour = "black") +
+  geom_line(data = visits_valid, aes(ds, y), colour = "grey50")
+
+#Now Prophet can decompose a tme series into Holidays
+#So lets consider Holidays 
+# And prepare PROPHET Function
+#we need to do is to truncate our air_visits data on May 31 2016 in an intermediate step
+#to see the result for golden week
+
+#========= 5.2.1 PROPHET Holiday FUNCTION - Jan'16 to May'16 =============================
+
+plot_prophet_air_id_holiday <- function(air_id, use_hday){
+  
+  #Creating truncated dataset upto 31May2016
+  air_visits_cut <- air_visits %>%
+    filter(visit_date <= ymd("20160531"))
+  
+  #Creating dataset for Holiday only
+  hday <- holidays %>%
+    filter(holiday_flg == TRUE) %>%
+    mutate(ds=date,holiday = "holiday")
+           
+  hday<-hday[c(5:6)]
+  
+  #length for prediction
+  pred_len <- test %>%
+    separate(id, c("air", "store_id", "date"), sep = "_") %>%
+    distinct(date) %>%
+    nrow()
+  
+  #Create dummy dataset without any gap
+  max_date <- max(air_visits_cut$visit_date)
+  
+  split_date <- max_date - pred_len
+  
+  all_visits <- tibble(visit_date = seq(min(air_visits_cut$visit_date), max(air_visits_cut$visit_date), 1))
+  
+  #Extracting required store id
+  foo <- air_visits_cut %>%
+    filter(air_store_id == air_id)
+  
+  ##Create dataset without any gap
+  visits <- foo %>%
+    right_join(all_visits, by = "visit_date") %>%
+    mutate(y = log1p(visitors),ds = visit_date)
+  
+  visits<-visits[c(4:5)]
+  
+  #Train and Validation dat set
+  visits_train <- visits %>% filter(ds <= split_date)
+  
+  visits_valid <- visits %>% filter(ds > split_date)
+  
+  #Prophet Fit Based on Condition 
+  if (use_hday == TRUE){
+    proph <- prophet(visits_train,
+                     changepoint.prior.scale=0.5,
+                     yearly.seasonality=FALSE,
+                     holidays = hday)
+    ptitle = "Prophet (w. holidays) for "
+  } else {
+    proph <- prophet(visits_train,
+                     changepoint.prior.scale=0.5,
+                     yearly.seasonality=FALSE)
+    ptitle = "Prophet (w.out hdays) for "
+  }
+  
+  #Forecasting
+  future <- make_future_dataframe(proph, periods = pred_len)
+  
+  fcast <- predict(proph, future)
+  
+  #Plotting
+  p <- fcast %>%
+    as.tibble() %>%
+    mutate(ds = date(ds)) %>%
+    ggplot(aes(ds, yhat)) +
+    geom_ribbon(aes(x = ds, ymin = yhat_lower, ymax = yhat_upper), fill = "light blue") +
+    geom_line(colour = "blue") +
+    geom_line(data = visits_train, aes(ds, y), colour = "black") +
+    geom_line(data = visits_valid, aes(ds, y), colour = "grey50") +
+    labs(title = str_c(ptitle, air_id))+
+    xlab("Time")+
+    ylab("log(Visitors)")
+  
+  return(p)
+} 
+
+p1 <- plot_prophet_air_id_holiday("air_5c817ef28f236bdf", TRUE)
+p2 <- plot_prophet_air_id_holiday("air_5c817ef28f236bdf", FALSE)
+
+plot(p1)#With Holiday
+plot(p2)#Without Holiday
+
+#There is a subtle improvement in fitting the Golden Week visitors when 
+#including holidays. The performance of this component might improve if 
+#there are more holidays included in the training set
+
+
+#==================== 5.2.2 PROPHET FUNCTION   =============================
+#Preparing Final Function on Prophet for Submission
+plot_prophet_air_id_holiday_validation <- function(air_id, use_hday){
+  
+  #Creating dataset for Holiday only
+  hday <- holidays %>%
+    filter(holiday_flg == TRUE) %>%
+    mutate(ds=date,holiday = "holiday")
+  
+  hday<-hday[c(5:6)]
+  
+  #length for prediction
+  pred_len <- test %>%
+    separate(id, c("air", "store_id", "date"), sep = "_") %>%
+    distinct(date) %>%
+    nrow()
+  
+  #Create dummy dataset without any gap
+  max_date <- max(air_visits$visit_date)
+  
+  split_date <- max_date - pred_len
+  
+  all_visits <- tibble(visit_date = seq(min(air_visits$visit_date), max(air_visits$visit_date), 1))
+  
+  #Extracting required store id
+  foo <- air_visits %>%
+    filter(air_store_id == air_id)
+  
+  ##Create dataset without any gap
+  visits <- foo %>%
+    right_join(all_visits, by = "visit_date") %>%
+    mutate(y = log1p(visitors),ds = visit_date)
+  
+  visits<-visits[c(4:5)]
+  
+  #Train and Validation dat set
+  visits_train <- visits %>% filter(ds <= split_date)
+  
+  visits_valid <- visits %>% filter(ds > split_date)
+  
+  #Prophet Fit Based on Condition 
+  if (use_hday == TRUE){
+    proph <- prophet(visits_train,
+                     changepoint.prior.scale=0.5,
+                     yearly.seasonality=FALSE,
+                     holidays = hday)
+    ptitle = "Prophet (w. holidays) for "
+  } else {
+    proph <- prophet(visits_train,
+                     changepoint.prior.scale=0.5,
+                     yearly.seasonality=FALSE)
+    ptitle = "Prophet (w.out hdays) for "
+  }
+  
+  #Forecasting
+  future <- make_future_dataframe(proph, periods = pred_len)
+  
+  fcast <- predict(proph, future)
+  
+  #Plotting
+  p <- fcast %>%
+    as.tibble() %>%
+    mutate(ds = date(ds)) %>%
+    ggplot(aes(ds, yhat)) +
+    geom_ribbon(aes(x = ds, ymin = yhat_lower, ymax = yhat_upper), fill = "light blue") +
+    geom_line(colour = "blue") +
+    geom_line(data = visits_train, aes(ds, y), colour = "black") +
+    geom_line(data = visits_valid, aes(ds, y), colour = "grey50") +
+    labs(title = str_c(ptitle, air_id))+
+    xlab("Time")+
+    ylab("log(Visitors)")
+  
+  return(p)
+}
+
+plot_prophet_air_id_holiday_validation("air_ba937bf13d40fb24",FALSE)
+
+
+# ====================5.3 Holt-Winters ============================
+#A more traditional time series filtering and forecasting is the Holt-Winters 
+#algorithm, as implemented in the stats package. 
+#This is an exponential smoothing method which uses moving averages to take
+#into account the presence of a trend in the data. Here we define a default 
+#seasonal model in a fitting and plotting function
+
+plot_hw_air_id <- function(air_id){
+  
+  pred_len <- test %>%
+    separate(id, c("air", "store_id", "date"), sep = "_") %>%
+    distinct(date) %>%
+    nrow()
+  
+  
+  max_date <- max(air_visits$visit_date)
+  
+  split_date <- max_date - pred_len
+  
+  all_visits <- tibble(visit_date = seq(min(air_visits$visit_date), max(air_visits$visit_date), 1))
+  
+  
+  
+  foo <- air_visits %>%
+    filter(air_store_id == air_id)
+  
+
+  #creating dataset without any gap and
+  #converting visitor to log(visitor)
+  visits<-foo  %>%
+    right_join(all_visits,by = "visit_date") %>%
+    mutate(wkday=wday(visit_date),
+           visitors=log1p(visitors)) %>%
+    rownames_to_column()
+  
+  #Filling NA with weekdays median value
+  for (i in 1:7) {
+    x<-median(visits$visitors[visits$wkday==i],na.rm = T)
+    visits$visitors[visits$wkday==i&is.na(visits$visitors)]=x 
+  }
+  
+  visits_train <- visits %>% filter(visit_date <= split_date)
+  
+  visits_valid <- visits %>% filter(visit_date > split_date)
+  
+
+  hw.fit <- HoltWinters(tsclean(ts(visits_train$visitors, frequency = 7)))
+  
+  hw_visits <- predict(hw.fit, n.ahead = pred_len, prediction.interval = T, level = 0.95) %>%
+    as.tibble() %>%
+    bind_cols(visits_valid)
+
+  
+  visits_train %>%
+    ggplot(aes(visit_date, visitors)) +
+    geom_line() +
+    geom_ribbon(data = hw_visits, aes(x = visit_date, ymin = lwr, ymax = upr), fill = "light blue") +
+    geom_line(data = hw_visits, aes(visit_date, visitors), color = "grey60") +
+    geom_line(data = hw_visits, aes(visit_date, fit), color = "blue") +
+    geom_line(data = hw_visits, aes(visit_date, fit), color = "blue") +
+    labs(x = "Time [weeks]", y = "log visitors vs pred") +
+    ggtitle("HoltWinters")
+}
+
+plot_hw_air_id("air_ba937bf13d40fb24")
+
+# =============6.COMPARISON - ARIMA vs PROPHET vs HoltWinters ==================
+
+
+compare_arima_hw_Prophet<-function(air_id){
+  p1<- plot_auto_arima_air_id(air_id)
+  p2<- plot_hw_air_id(air_id)
+  p3<- plot_prophet_air_id_holiday_validation(air_id,FALSE)
+  p4<- plot_prophet_air_id_holiday_validation(air_id,TRUE)
+  
+  grid.arrange(p1,p2,p3,p4, nrow=4)
+}
+
+compare_arima_hw_Prophet("air_ba937bf13d40fb24")
+#Aisan
+compare_arima_hw_Prophet("air_764f71040a413d4d")
+#Karaoke
+compare_arima_hw_Prophet("air_c8fe396d6c46275d")
+
+
+
+
+#===================== PROPHET FINAL FUNCTION FOR TEST  =============================
+#Preparing Final Function on Prophet for Submission
+plot_prophet_air_id_holiday_final <- function(air_id, use_hday){
+  
+  
+  #Creating dataset for Holiday only
+  hday <- holidays %>%
+    filter(holiday_flg == TRUE) %>%
+    mutate(ds=date,holiday = "holiday")
+  
+  hday<-hday[c(5:6)]
+  
+  #length for prediction
+  pred_len <- test %>%
+    separate(id, c("air", "store_id", "date"), sep = "_") %>%
+    distinct(date) %>%
+    nrow()
+  
+  #Create dummy dataset without any gap
+  max_date <- max(air_visits$visit_date)
+  
+  #split_date <- max_date - pred_len
+  
+  all_visits <- tibble(visit_date = seq(min(air_visits$visit_date), max(air_visits$visit_date), 1))
+  
+  #Extracting required store id
+  foo <- air_visits %>%
+    filter(air_store_id == air_id)
+  
+  ##Create dataset without any gap
+  visits <- foo %>%
+    right_join(all_visits, by = "visit_date") %>%
+    mutate(y = log1p(visitors),ds = visit_date)
+  
+  visits<-visits[c(4:5)]
+  
+  #Train and Validation dat set
+  #visits_train <- visits %>% filter(ds <= split_date)
+  
+  #visits_valid <- visits %>% filter(ds > split_date)
+  
+  #Prophet Fit Based on Condition 
+  if (use_hday == TRUE){
+    proph <- prophet(visits,
+                     changepoint.prior.scale=0.5,
+                     yearly.seasonality=FALSE,
+                     holidays = hday)
+    ptitle = "Prophet (w. holidays) for "
+  } else {
+    proph <- prophet(visits,
+                     changepoint.prior.scale=0.5,
+                     yearly.seasonality=FALSE)
+    ptitle = "Prophet (w.out hdays) for "
+  }
+  
+  #Forecasting
+  future <- make_future_dataframe(proph, periods = pred_len)
+  
+  fcast <- predict(proph, future)
+  
+  #Plotting
+  p <- fcast %>%
+    as.tibble() %>%
+    mutate(ds = date(ds)) %>%
+    ggplot(aes(ds, yhat)) +
+    geom_ribbon(aes(x = ds, ymin = yhat_lower, ymax = yhat_upper), fill = "light blue") +
+    geom_line(colour = "blue") +
+    geom_line(data = visits, aes(ds, y), colour = "black") +
+    #geom_line(data = visits_valid, aes(ds, y), colour = "grey50") +
+    labs(title = str_c(ptitle, air_id))+
+    xlab("Time")+
+    ylab("log(Visitors)")
+  
+  return(p)
+}
+
+p1<-plot_prophet_air_id_holiday_final("air_5c817ef28f236bdf", TRUE)
+#Karaoke 
+p2<-plot_prophet_air_id_holiday_final("air_c8fe396d6c46275d",TRUE)
+#Asian
+p3<-plot_prophet_air_id_holiday_final("air_764f71040a413d4d",TRUE)
+
+grid.arrange(p1,p2,p3,nrow=3)
+
+
+
+#================ 7. Forecasting for test data ====================================
+test_visit<-test %>%
+  separate(id,c("air","store_id","date"),sep="_") %>%
+  mutate(air_store_id=str_c(air,store_id,sep="_")) %>%
+  group_by(air_store_id) %>%
+  count()
+
+for (i in 1:length(test_visit)) {
+  x<-as.character(test_visit[i,1])
+  print(x)
+  plot(plot_prophet_air_id_holiday_final(x,TRUE))
+}
+
+#====================== END of Project =========================================
