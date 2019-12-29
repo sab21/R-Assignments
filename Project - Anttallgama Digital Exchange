@@ -1,0 +1,622 @@
+# Antallagma 
+# Problem Statement
+# Welcome to Antallagma - a digital exchange for trading goods. 
+# Antallagma started its operations 5 years back and has supported more than a 
+# million transactions till date. The Antallagma platform enables working of a 
+# traditional exchange on an online portal. 
+# 
+# On one hand, buyers make a bid at the value they are willing to buy ("bid value") 
+# and the quantity they are willing to buy. Sellers on the other hand, ask for an  
+# ask price and the quantity they are willing to sell. The portal matches the buyers and 
+# sellers in real-time to create trades. All trades are settled at the end of the day 
+# at the median price of all agreed trades. 
+# 
+# You are one of the traders on the exchange and can supply all the material being
+# traded on the exchange. In order to improve your logistics, you want to predict
+# the median trade prices and volumes for all the trades happening (at item level)
+# on the exchange. You can then plan to then use these predictions to create an 
+# optimized inventory strategy. 
+# 
+# You are expected to create trade forecasts for all items being traded on Antallagma
+# along with the trade prices for a period of 6 months. 
+
+#Evaluation Criteria: 
+#Overall Error = Lambda1 x RMSE error of volumes + Lambda2 x RMSE error of prices 
+#Where Lambda1 and Lambda2 are normalizing parameters 
+
+
+# ==== 1. Load Libraries and Loading Data ====
+# general visualisation
+library('ggplot2') # visualisation
+#library('scales') # visualisation
+#library('grid') # visualisation
+library('gridExtra') # visualisation
+library('RColorBrewer') # visualisation
+#library('corrplot') # visualisation
+#library('ggrepel') # visualisation
+#library('ggridges') # visualisation
+library('ggExtra') # visualisation for ggMarginal()
+
+# general data manipulation
+library('dplyr') # data manipulation
+library('readr') # input/output
+library('data.table') # data manipulation
+library('tibble') # data wrangling
+library('tidyr') # data wrangling
+library('stringr') # string manipulation
+library('forcats') # factor manipulation
+library(lattice)
+#library(DMwR) #For knn imputation
+library(zoo)
+
+# Date plus forecast
+#library(vars)
+library('lubridate') # date and time
+library('timeDate') # date and time
+library('tseries') # time series analysis
+library('forecast') # time series analysis
+library(prophet)
+
+#Load Data
+data<-as_tibble(read.csv("C:/Users/acer/Desktop/Python Classnotes/Python Project/Machine Learning Project2/Traindata/train.csv"))
+
+
+# ------------ 2. OverView ------------------
+
+glimpse(data)
+colnames(data)
+dim(data) #881876 rows 8 col
+#ID - combination of item id and date
+#tem_ID
+#Datetime factor - need to be changed to date
+#Category_3 - need to be converted to factor
+#Category_2 -need to be converted to factor
+#Category_1- need to be converted to factor
+#price  -  target 1
+#Number_Of_Sales - target 2
+
+data %>% group_by(Category_3,Category_2) %>%
+  tally()
+
+#Categories can be deleted
+
+
+#Number of unique Items in exchange
+data %>% distinct(Item_ID) %>% tally() #1529 Items
+
+
+#Missing Values
+sum(is.na(data[,7:8]))
+#Nil
+
+# ----------------3. Feature Overview and Engineering -----------------
+#Convert datatypes of datetime to date
+data<- data %>%
+  mutate(Datetime=ymd(Datetime)) %>%
+  mutate(Item_ID=as.factor(Item_ID))
+
+glimpse(train)
+# selected ID
+# 30495
+# 31342
+# 29999
+# 30068
+
+min(data$Datetime);max(data$Datetime)
+# "2014-01-01"; "2016-06-30"
+#So we have data for 2.5 years
+
+#Some Item there from beginning some may be introduced later and some may have stopped 
+# SO we will select one item and prepare model on it and check its validation.
+#Also we create another data set from start date of introduction of that item till now 
+#to fill the gap.
+#then we will make a function
+
+
+id=29654
+
+#Creating data set for particular id
+data_id<-data %>%
+  filter(Item_ID==id)
+
+dummy<-tibble(Datetime=seq(min(data_id$Datetime),max(data_id$Datetime),1))
+
+
+#Joining data with dummy to fill the gap 
+data_id<-data_id %>%
+  select(Item_ID,Datetime,Price,Number_Of_Sales) %>%
+  right_join(dummy,by = "Datetime") %>%
+  rownames_to_column()
+
+#Check for null values
+null_values<-sum(is.na(data_id))
+
+#Replace NA with previous data
+if (null_values>0) {
+  data_id<-na.locf(data_id)
+}
+
+
+summary(data_id)
+#Price Ranges from 84.77 to 230
+
+#Correlation
+correlation<-cor(data_id$Price,data_id$Number_Of_Sales)
+message("Correlation between Price and Volumes for ID no ",id,": ",round(correlation,2))
+
+# =========== 3.2 Price Vs ScatterPlot Visualisation =========================
+#Visualisation '
+#ScatterPlot between price and Qty
+p<-data_id %>%
+  ggplot(aes(Price,Number_Of_Sales))+
+  geom_point(alpha=0.5)+
+  geom_smooth(method = "loess")+
+  geom_smooth(method = "lm", color="green")
+ggMarginal(p,type = "histogram", fill="blue", bins=50)
+#Clearly with increase in price sales decreases and vice versa
+#There are outliers in both Price and Sales
+
+
+plot_price_vs_volume_marginal<- function(id){
+  data_id1<-data %>%
+    filter(Item_ID==id)
+  
+  p<-data_id1 %>%
+    ggplot(aes(Price,Number_Of_Sales))+
+    geom_point(alpha=0.5)+
+    geom_smooth(method = "loess")+
+    geom_smooth(method = "lm", color="green")
+  
+  ggMarginal(p,type = "histogram", fill="blue", bins=50)
+  
+}
+
+plot_price_vs_volume_marginal(30068)
+plot_price_vs_volume_marginal(29654)
+
+# =================3.3  TimeSeries Plot ===============
+#Lets visualise individual TS Plot
+#tsclean() is use to deal outliers
+plot(tsclean(ts(data_id$Price,frequency = 365,start = 2014)),
+     xlab="Time in Week",ylab="Price")
+plot(tsclean(ts(data_id$Number_Of_Sales,frequency = 7)),
+     xlab="Time in Week",ylab="Number_Of_Sales")
+
+# mean(ts(data_id$Price))#132.3026
+# mean(ts(data_id$Number_Of_Sales))#11.20943
+# 
+# price_t2<-ts(diff(ts(data_id$Price),differences = 1),frequency = 7)
+# plot(price_t2)
+# mean(price_t2)
+# sales_t2<-ts(diff(ts(data_id$Number_Of_Sales),differences = 1),frequency = 7)
+# plot(sales_t2)
+# mean(sales_t2)
+# 
+# #correlogram acf
+# acf(price_t2,lag.max = 10) #q=3 for lag =1
+# acf(sales_t2,lag.max = 10) #q=1
+# 
+# #partial corroloelogram
+# pacf(price_t2,lag.max = 10) #p=5 for lag =1
+# pacf(sales_t2,lag.max = 10) #p=7
+
+
+# =================4. Auto Arima for Sales and Price ===================
+##We have to forecast for 6 months so create train and valid dataset
+
+pred_len=180
+split_date<-max(data_id$Datetime)-pred_len
+
+train <- data_id %>%
+  filter(Datetime<=split_date)
+valid<- data_id %>%
+  filter(Datetime>split_date)
+
+
+#Auto Arima for Price
+price.arima.fit<-auto.arima(tsclean(ts(train$Price,frequency = 7)))
+
+checkresiduals(price.arima.fit)
+
+ap<-price.arima.fit %>% forecast(h=pred_len) %>%
+  accuracy(valid$Price)
+ap[,"RMSE"]
+
+# #Model Validation
+# Box.test(price.arima.fit$residuals)$p.value
+# plot(price.arima.fit$residuals)
+# mean(price.arima.fit$residuals)
+
+price_arima<- price.arima.fit  %>%
+  forecast(h=pred_len,level = c(50,95))
+  
+p_price<-price_arima   %>%
+  autoplot()+
+  geom_line(aes(as.integer(rowname)/7,Price),data = valid,color="grey40")+
+  xlab("Time")+
+  ylab("Price")
+
+#Auto Arima for Qty
+vol.arima.fit<-auto.arima(tsclean(ts(train$Number_Of_Sales,frequency = 7)))
+
+
+# #Model Validation
+checkresiduals(vol.arima.fit)
+av<-vol.arima.fit %>% forecast(h=pred_len) %>% accuracy(valid$Number_Of_Sales)
+av[,"RMSE"]
+
+# Box.test(price.arima.fit$residuals)$p.value
+# plot(price.arima.fit$residuals)
+# mean(price.arima.fit$residuals)
+
+
+vol_arima<- vol.arima.fit  %>%
+  forecast(h=pred_len,level = c(50,95))
+
+p_vol<-vol_arima   %>%
+  autoplot()+
+  geom_line(aes(as.integer(rowname)/7,(Number_Of_Sales)),data = valid,color="grey40")+
+  xlab("Time in Week")+
+  ylab("Number of Sales")
+
+
+grid.arrange(p_price,p_vol,nrow=2)
+
+#==================== 4.2 Auto Arima Plot Function ====================================
+
+plot_arima_price_volume<-function(id,pred_len=180){
+  #subsetting data as per metioned id
+  data_id<-data %>%
+    filter(Item_ID==id) %>%
+    select(Item_ID,Datetime,Price,Number_Of_Sales)
+  
+  #Filling the gap if any
+  dummy<- tibble(Datetime=seq(min(data_id$Datetime),max(data_id$Datetime),1))
+  
+  data_id<-data_id %>%
+    right_join(dummy,by = "Datetime")  %>%
+    rownames_to_column()
+  
+  #Check for null values
+  null_values<-sum(is.na(data_id))
+  
+  #Replace NA with previous data
+  if (null_values>0) {
+    data_id<-na.locf(data_id)
+  }
+  
+  pred_len<- pred_len
+  
+  split_date<- max(data_id$Datetime)-pred_len
+  
+  #Split data into train and valid
+  train<- data_id %>%
+    filter(Datetime<=split_date)
+    
+  valid<- data_id %>%
+    filter(Datetime>split_date)
+  
+  #Lambda Values
+  lp<-BoxCox.lambda(train$Price)
+  lv<-BoxCox.lambda(train$Number_Of_Sales)
+  
+  #Fit Price model
+  price.arima.fit<-auto.arima(tsclean(ts(train$Price)),lambda = lp)
+  
+  #Forecast from model
+  price_arima<-price.arima.fit %>%
+    forecast(h=pred_len,level=c(50,95))
+  
+  p_price<- price_arima  %>%
+    autoplot()+
+    geom_line(aes(as.integer(rowname),Price),data = valid,color="grey50")+
+    xlab("Time in Days")+
+    ylab("Price")
+  
+  #Fit Volume model
+  vol.arima.fit<-auto.arima(tsclean(ts(train$Number_Of_Sales)),lambda = lv)
+  
+  #Forecast from model
+  vol_arima<-vol.arima.fit %>%
+    forecast(h=pred_len,level=c(50,95))
+  
+  p_vol<- vol_arima  %>%
+    autoplot()+
+    geom_line(aes(as.integer(rowname),Number_Of_Sales),data = valid,color="grey50")+
+    xlab("Time in Days")+
+    ylab("Number_Of_Sales")
+  
+  #Plotting 
+  grid.arrange(p_price,p_vol,nrow=2)
+}
+
+
+
+#Calling Function
+plot_arima_price_volume(31342,30)
+plot_arima_price_volume(29654,30)
+
+#==================== 4.3 Exponential Smoothing (ets) Plot Function ====================================
+
+plot_ets_price_volume<-function(id,pred_len=180){
+  #subsetting data as per metioned id
+  data_id<-data %>%
+    filter(Item_ID==id) %>%
+    select(Item_ID,Datetime,Price,Number_Of_Sales)
+  
+  #Filling the gap if any
+  dummy<- tibble(Datetime=seq(min(data_id$Datetime),max(data_id$Datetime),1))
+  
+  data_id<-data_id %>%
+    right_join(dummy,by = "Datetime")  %>%
+    rownames_to_column()
+  
+  #Check for null values
+  null_values<-sum(is.na(data_id))
+  
+  #Replace NA with previous data
+  if (null_values>0) {
+    data_id<-na.locf(data_id)
+  }
+  
+  pred_len<- pred_len
+  
+  split_date<- max(data_id$Datetime)-pred_len
+  
+  #Split data into train and valid
+  train<- data_id %>%
+    filter(Datetime<=split_date)
+  
+  valid<- data_id %>%
+    filter(Datetime>split_date)
+  
+  #Lambda Values
+  lp<-BoxCox.lambda(train$Price)
+  lv<-BoxCox.lambda(train$Number_Of_Sales)
+  
+  #Fit Price model
+  price.ets.fit<-ets(tsclean(ts(train$Price)),lambda = lp)
+  
+  #Forecast from model
+  price_ets<-price.ets.fit %>%
+    forecast(h=pred_len,level=c(50,95))
+  
+  e_price<- price_ets  %>%
+    autoplot()+
+    geom_line(aes(as.integer(rowname),Price),data = valid,color="grey50")+
+    xlab("Time in Days")+
+    ylab("Price")
+  
+  #Fit Volume model
+  vol.ets.fit<-ets(tsclean(ts(train$Number_Of_Sales)),lambda = lv)
+  
+  #Forecast from model
+  vol_ets<-vol.ets.fit %>%
+    forecast(h=pred_len,level=c(50,95))
+  
+  e_vol<- vol_ets  %>%
+    autoplot()+
+    geom_line(aes(as.integer(rowname),Number_Of_Sales),data = valid,color="grey50")+
+    xlab("Time in Days")+
+    ylab("Number_Of_Sales")
+  
+  #Plotting 
+  grid.arrange(e_price,e_vol,nrow=2)
+}
+
+#Calling Function
+plot_ets_price_volume(31342,30)
+
+#==================== 4.3 Holt Winter Plot Function ====================================
+
+plot_hwt_price_volume<-function(id,pred_len=180){
+  #subsetting data as per metioned id
+  data_id<-data %>%
+    filter(Item_ID==id) %>%
+    select(Item_ID,Datetime,Price,Number_Of_Sales)
+  
+  #Filling the gap if any
+  dummy<- tibble(Datetime=seq(min(data_id$Datetime),max(data_id$Datetime),1))
+  
+  data_id<-data_id %>%
+    right_join(dummy,by = "Datetime")  %>%
+    rownames_to_column()
+  
+  #Check for null values
+  null_values<-sum(is.na(data_id))
+  
+  #Replace NA with previous data
+  if (null_values>0) {
+    data_id<-na.locf(data_id)
+  }
+  
+  pred_len<- pred_len
+  
+  split_date<- max(data_id$Datetime)-pred_len
+  
+  #Split data into train and valid
+  train<- data_id %>%
+    filter(Datetime<=split_date)
+  
+  valid<- data_id %>%
+    filter(Datetime>split_date)
+  
+  #Fit Price model
+  price.hwt.fit<-HoltWinters(tsclean(ts(train$Price,frequency = 7)))
+  
+  #Forecast from model
+  price_hwt<-price.hwt.fit %>%
+    forecast(h=pred_len,level=c(50,95))
+  
+  h_price<- price_hwt  %>%
+    autoplot()+
+    geom_line(aes(as.integer(rowname)/7,Price),data = valid,color="grey50")+
+    xlab("Time in Week")+
+    ylab("Price")
+  
+  #Fit Volume model
+  vol.hwt.fit<-HoltWinters(tsclean(ts(train$Number_Of_Sales,frequency = 7)))
+  
+  #Forecast from model
+  vol_hwt<-vol.hwt.fit %>%
+    forecast(h=pred_len,level=c(50,95))
+  
+  h_vol<- vol_hwt  %>%
+    autoplot()+
+    geom_line(aes(as.integer(rowname)/7,Number_Of_Sales),data = valid,color="grey50")+
+    xlab("Time in Week")+
+    ylab("Number_Of_Sales")
+  
+  #Plotting 
+  grid.arrange(h_price,h_vol,nrow=2)
+}
+
+#Calling Function
+plot_hwt_price_volume(31342,30)
+plot_hwt_price_volume(29654,30)
+
+
+#================= 5.1 Compare ARIMA ETS Holt Winter =================
+
+plot_compare_arima_ets_hwt<-function(id,pred_len=180){
+  p1<-plot_arima_price_volume(id,pred_len)
+  p2<-plot_ets_price_volume(id,pred_len)
+  p3<-plot_hwt_price_volume(id,pred_len)
+  grid.arrange(p1,p2,p3,ncol=3)
+}
+
+plot_compare_arima_ets_hwt(31342)
+plot_compare_arima_ets_hwt(29999,30)
+plot_compare_arima_ets_hwt(30864,30)
+plot_compare_arima_ets_hwt(30068,180)
+plot_compare_arima_ets_hwt(29654,180)
+
+#============ 5.2 Compare Accuracy of arima ets and holtWinter ====================
+
+compare_rmse_arima_ets_hwt<-function(id,pred_len=180){
+  #subsetting data as per metioned id
+  data_id<-data %>%
+    filter(Item_ID==id) %>%
+    select(Item_ID,Datetime,Price,Number_Of_Sales)
+  
+  #Filling the gap if any
+  dummy<- tibble(Datetime=seq(min(data_id$Datetime),max(data_id$Datetime),1))
+  
+  data_id<-data_id %>%
+    right_join(dummy,by = "Datetime")  %>%
+    rownames_to_column()
+  
+  #Check for null values
+  null_values<-sum(is.na(data_id))
+  
+  #Replace NA with previous data
+  if (null_values>0) {
+    data_id<-na.locf(data_id)
+  }
+  
+  pred_len<- pred_len
+  
+  split_date<- max(data_id$Datetime)-pred_len
+  
+  #Split data into train and valid
+  train<- data_id %>%
+    filter(Datetime<=split_date)
+  
+  valid<- data_id %>%
+    filter(Datetime>split_date)
+  
+  #Check Accuracy for Arima model
+  #Price
+  arima_price_accuracy<- auto.arima(tsclean(ts(train$Price,frequency = 7))) %>%
+    forecast(h=pred_len) %>%
+    accuracy(valid$Price)
+  #volume
+  arima_vol_accuracy<- auto.arima(tsclean(ts(train$Number_Of_Sales,frequency = 7))) %>%
+    forecast(h=pred_len) %>%
+    accuracy(valid$Number_Of_Sales)
+  
+  #Check Accuracy for ETS model
+  #Price
+  ets_price_accuracy<- ets(tsclean(ts(train$Price,frequency = 7))) %>%
+    forecast(h=pred_len) %>%
+    accuracy(valid$Price)
+  #volume
+  ets_vol_accuracy<- ets(tsclean(ts(train$Number_Of_Sales,frequency = 7))) %>%
+    forecast(h=pred_len) %>%
+    accuracy(valid$Number_Of_Sales)
+  
+  #Check Accuracy for Holt Winter model
+  #Price
+  hwt_price_accuracy<- HoltWinters(tsclean(ts(train$Price,frequency = 7))) %>%
+    forecast(h=pred_len) %>%
+    accuracy(valid$Price)
+  #volume
+  hwt_vol_accuracy<- HoltWinters(tsclean(ts(train$Number_Of_Sales,frequency = 7))) %>%
+    forecast(h=pred_len) %>%
+    accuracy(valid$Number_Of_Sales)
+  
+  rmse_overall<-cbind(arima_price_accuracy[,"RMSE"],
+                      ets_price_accuracy[,"RMSE"],
+                      hwt_price_accuracy[,"RMSE"],
+                      arima_vol_accuracy[,"RMSE"],
+                      ets_vol_accuracy[,"RMSE"],
+                      hwt_vol_accuracy[,"RMSE"])
+  colnames(rmse_overall)<-c("Arima_Price","ets_Price","Hwt_Price",
+                            "Arima_Vol","ets_Vol","Hwt_Vol")
+  print(rmse_overall)
+
+}
+
+compare_rmse_arima_ets_hwt(29999,180)
+compare_rmse_arima_ets_hwt(30495,180)
+compare_rmse_arima_ets_hwt(30375,180)
+compare_rmse_arima_ets_hwt(30864,180)
+compare_rmse_arima_ets_hwt(30068,180)
+compare_rmse_arima_ets_hwt(29654,180)
+
+#As per comparison ARIMA model will be selected
+
+#==================== Final Submission ============================
+
+#Subset the total train dataset into multiple subset based on Item_id
+data_id<-data[,c(2,3,7,8)]
+df_list <- split(data_id, as.factor(data$Item_ID))
+#Model Implementation(ARIMA):
+  #Implement the  Model on the each dataset
+res_price <- list()
+res_vol <- list()
+
+#Ets model 
+for(i in 1:length(df_list)) {
+  a <- as.data.frame(df_list[i])
+  #Select Lambda value
+  lp<-BoxCox.lambda(a[,3])
+  lv<-BoxCox.lambda(a[,4])
+  #model fit and  forecast
+  res_price[[levels(data_id$Item_ID)[i]]] <- auto.arima(tsclean(ts(a[,3])),lambda = lp) %>%
+    forecast(h=184)
+  res_vol[[levels(data_id$Item_ID)[i]]] <- auto.arima(tsclean(ts(a[,4])),lambda = lv) %>% 
+    forecast(h=184)
+}
+#Convert output the required format
+price <-NULL
+numberofsales <-NULL
+
+for(i in 1:length(res_price)){
+  p <- as.data.frame(res_price[i]) 
+  v <- as.data.frame(res_vol[i]) 
+  price <- append(price,p[,1])
+  numberofsales <- append(numberofsales,v[,1])
+}
+
+
+list <- as.data.frame(data %>% select(Item_ID) %>% distinct() %>% arrange(Item_ID))
+last_date<-max(data$Datetime)
+test<- NULL
+for(i in 1:nrow(list)){
+  x<-paste(list[i,],seq(last_date+1,last_date+184,1),sep = "_")
+  test<-c(test,x)
+}
+
+output <- data.frame(test,price,numberofsales)
+# ========================= END ==============================
