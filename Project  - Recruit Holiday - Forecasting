@@ -1,4 +1,5 @@
-# Recruit Holiday - Forecasting
+# Recruit Holdings - Forecasting (Auto Arima, Prophet, Holt WInters)
+# Final Submisision on Prophet Fit with Holidays
 
 # Recruit Holdings has unique access to key datasets that could make automated future 
 # customer prediction possible. Specifically, Recruit Holdings owns Hot Pepper Gourmet 
@@ -36,24 +37,24 @@ library('corrplot') # visualisation
 
 # general data manipulation
 library('dplyr') # data manipulation
-library('readr') # input/output
+#library('readr') # input/output
 library('data.table') # data manipulation
 library('tibble') # data wrangling
 library('tidyr') # data wrangling
-library('stringr') # string manipulation
-library('forcats') # factor manipulation
+#library('stringr') # string manipulation
+#library('forcats') # factor manipulation
 
 # specific visualisation
-library('ggrepel') # visualisation
-library('ggridges') # visualisation
+#library('ggrepel') # visualisation
+#library('ggridges') # visualisation
 library('ggExtra') # visualisation
-library('ggforce') # visualisation
-library('viridis') # visualisation
+#library('ggforce') # visualisation
+#library('viridis') # visualisation
 
 # specific data manipulation
-library('lazyeval') # data wrangling
-library('broom') # data wrangling
-library('purrr') # string manipulation
+#library('lazyeval') # data wrangling
+#library('broom') # data wrangling
+#library('purrr') # string manipulation
 
 # Date plus forecast
 library('lubridate') # date and time
@@ -61,7 +62,6 @@ library('timeDate') # date and time
 library('tseries') # time series analysis
 library('forecast') # time series analysis
 library('prophet') # time series analysis
-library('timetk') # time series analysis
 
 # Maps / geospatial
 library('geosphere') # geospatial locations
@@ -256,7 +256,7 @@ plot(p4)
 
 
 #We will be forecasting for the last week of April plus May 2017, 
-#so let’s look at this time range in our 2016 training data:
+#so let's look at this time range in our 2016 training data:
 air_visits %>%
   filter(visit_date > ymd("2016-04-15") & visit_date < ymd("2016-06-15")) %>%
   group_by(visit_date) %>%
@@ -272,7 +272,7 @@ air_visits %>%
 
 
 #3.2 Air Reservations
-#Let’s see how our reservations data compares to the actual visitor numbers. 
+#Let's see how our reservations data compares to the actual visitor numbers. 
 #We start with the air restaurants and visualise their visitor volume through 
 #reservations for each day, alongside the hours of these visits and the time between 
 #making a reservation and visiting the restaurant:
@@ -396,7 +396,7 @@ p3 <- foo %>%
   geom_col(fill = "red") +
   labs(x = "Time from reservation to visit [hours]")
 plot(p3)  
-#It’s worth noting that here the last few hours before the visit don’t see more volume 
+#It's worth noting that here the last few hours before the visit don't see more volume 
 #than the 24 or 48 hours before. This is in stark constrast to the air data.  
   
 #3.4  Air Store
@@ -420,7 +420,7 @@ p1 <- air_store %>%
   theme(legend.position = "none") +
   labs(x = "Type of cuisine (air_genre_name)", y = "Number of air restaurants")
 plot(p1)
-#There are lots of Izakaya gastropubs in our data, followed by Cafe’s
+#There are lots of Izakaya gastropubs in our data, followed by Cafe's
 
 p2 <- air_store %>%
   group_by(air_area_name) %>%
@@ -458,8 +458,8 @@ p1<-hpg_store %>%
 
 plot(p1)  
 #The hpg description contains a larger variety of genres than in the air data. #
-#Here, “Japanese style” appears to contain many more places that are categorised 
-#more specifically in the air data. The same applies to “International cuisine”.
+#Here, "Japanese style" appears to contain many more places that are categorised 
+#more specifically in the air data. The same applies to "International cuisine".
 
 p2<-hpg_store %>%
   group_by(hpg_area_name) %>%
@@ -531,12 +531,12 @@ foo %>%
   facet_wrap(~ air_genre_name)
 
 # The mean values range between 10 and 100 visitors per genre per day. Within each category, 
-# the long-term trend looks reasonably stable. There is an upward trend for “Creative Cuisine” 
-# and “Okonomiyaki” et al., while the popularity of “Asian” food has been declining since 
+# the long-term trend looks reasonably stable. There is an upward trend for "Creative Cuisine" 
+# and "Okonomiyaki" et al., while the popularity of "Asian" food has been declining since 
 # late 2016.
 
-# The low-count time series like “Karaoke” or “Asian” or "International" are  more 
-# noisy than the genres with higher numbers of visitors. Still, “Asian” restaurants appear 
+# The low-count time series like "Karaoke" or "Asian" or "International" are  more 
+# noisy than the genres with higher numbers of visitors. Still, "Asian" restaurants appear 
 # to be very popular despite their rarity.
 
 foo %>%
@@ -562,9 +562,9 @@ foo %>%
   theme(legend.position = "none") +
   facet_wrap(~ air_genre_name)+
   labs(x="WeekDays")
-# The biggest difference between weekend and weekdays exists for the “Karaoke” bars, 
+# The biggest difference between weekend and weekdays exists for the "Karaoke" bars, 
 # which rule the weekend. A similar trend, although with a considerably smaller gap, 
-# can be seen for the “International” cuisine.
+# can be seen for the "International" cuisine.
 
 
 foo %>%
@@ -574,7 +574,7 @@ foo %>%
   theme(legend.position = "none")+
   facet_wrap(~ air_genre_name)
 #The density curves confirm the impression we got from the week-day distribution: 
-#the “Asian” restaurants have rarely less than 10 visitors per date and the “Karaoke”
+#the "Asian" restaurants have rarely less than 10 visitors per date and the "Karaoke"
 #places show a very broad distribution due to the strong impact of the weekends. 
 #Note the logarithmic x-axis.
 
@@ -592,7 +592,7 @@ foo %>%
   scale_y_log10()+
   theme(legend.position ="none")
   
-#Overall, holidays don’t have any impact on the average visitor numbers. 
+#Overall, holidays don't have any impact on the average visitor numbers. 
 
 foo %>%
   mutate(wdy=wday(date,label = T)) %>%
@@ -665,7 +665,7 @@ air_store %>%
 #Asian and International are present only in Tokyo 
 #Karaoke present only in Hokkaida
 #Western food present only in Hokkaida nad Tokyo
-# “Izakaya” or “Cafe” are pretty ubiqutous
+# "Izakaya" or "Cafe" are pretty ubiqutous
 
 
 air_store %>%
@@ -685,7 +685,7 @@ air_store[air_store$air_genre_name=="Cafe/Sweets",] %>%
 #"Fukuoka-ken Fukuoka-shi DaimyÅ\u008d" has max no of restaurent (26) for "Cafe"
 
 #Curiously, the minimum here is 2, not 1.
-#This means that there is no air restaurant that is the only one of it’s genre in any area
+#This means that there is no air restaurant that is the only one of it's genre in any area
 #Lets check for duplicacy
 air_store  %>%
   filter(air_store_id %in% c("air_b5598d12d1b84890","air_bbe1c1a47e09f161"))
@@ -703,7 +703,7 @@ air_store  %>%
   geom_histogram(fill="blue",binwidth = 1)+
   xlab("Air Genre per Area")
 #The numbers of cases of identical genres in the same area drops, from the maximum
-#of “2”for air.
+#of "2"for air.
 
 #4.3.2 HPG store
 hpg_store %>%
@@ -713,9 +713,9 @@ hpg_store %>%
   theme(legend.position = "bottom",axis.text.x = element_text(angle = 90,hjust = 1,vjust = 0.9))
   
 #Tokyo features prominently in the areas with a lot of culinary diversity.
-#“Japanese style” and “International cuisine” are popular pretty much everywhere.
-#“Amusement bars” and “Udon/Soba” places are rare, 
-#as are “Shanghai food” or “Dim Sum”.
+#"Japanese style" and "International cuisine" are popular pretty much everywhere.
+#"Amusement bars" and "Udon/Soba" places are rare, 
+#as are "Shanghai food" or "Dim Sum".
 
 hpg_store %>%
   group_by(hpg_genre_name,hpg_area_name) %>%
@@ -739,7 +739,7 @@ hpg_store %>%
   geom_histogram(fill="red",binwidth = 1)+
   xlab("HPG Genre Per Area")
 #The numbers of cases of identical genres in the same area drops quickly, 
-#possibly exponentially,  “1” for  hpg data sets  
+#possibly exponentially,  "1" for  hpg data sets  
   
 
 air_visits %>%
@@ -813,7 +813,7 @@ ggMarginal(p,type = "histogram",fill="blue",bins=50)
 #This is not surprising, since a certain number of people will always be walk-in customers
 
 #A notable fraction of the points is below the line, which probably indicates 
-#that some people made a reservation but changed their mind and didn’t go
+#that some people made a reservation but changed their mind and didn't go
 
 #The linear fit suggests a trend in which larger numbers of reserve_visitors are 
 #more likely to underestimate the eventual visitor numbers. 
@@ -850,14 +850,14 @@ all_reserve %>%
 #Will use AUTO.ARIMA tool
 #tsclean will be used to clean outliers
 
-#We use the first air_store_id (“air_ba937bf13d40fb24”) as an example.
+#We use the first air_store_id ("air_ba937bf13d40fb24") as an example.
 
 air_id = "air_ba937bf13d40fb24"
 
 #In order to test our prediction, we will forecast for an identical time frame 
 #as we are ultimately tasked to predict (Apr 23th - May 31st). 
 #Here we automatically extract these 39 days from the length of the test 
-#prediction range and define it as our “prediction length”.
+#prediction range and define it as our "prediction length".
 str(test)
 View(test)
 pred_len<- test %>%
@@ -935,7 +935,7 @@ print(Box.test(arima.fit$residuals,type = "Ljung-Box")$p.value)
 #ie mean of residual = 0 ; We accept the model
 
 
-#Using the fitted ARIMA model we will forecast for our “prediction length”. 
+#Using the fitted ARIMA model we will forecast for our "prediction length". 
 #We include confidence intervals.
 #arima.fit
 arima_visits<-arima.fit %>% forecast(h=pred_len,level=c(50,95))
@@ -954,7 +954,8 @@ arima_visits %>%
 
 #Forecasting is perfect , lower and upper spikes are captured.
 
-#Lets Check The errors
+#Model Validation
+#Manually
 predicted<-predict(arima.fit,pred_len)$pred
 error<-visits_valid$visitors-predicted
 MSE=sum((error)^2)/pred_len
@@ -963,6 +964,13 @@ MAE=sum(abs(error))/pred_len
 MASE=sum(abs(scale(error)))/pred_len
 message("MSE:",MSE," RMSE:",RMSE," MAE:",MAE," MASE:",MASE)
 #Satisfactory results
+
+#By Package functions
+arima.fit %>% forecast(h=pred_len) %>% accuracy(visits_valid$visitors)
+
+checkresiduals(arima.fit)
+
+
 
 #Lets turn the whole procedure into function:
 #==================5.2 AUTO ARIMA Function  ==========================
@@ -1027,7 +1035,7 @@ plot_auto_arima_air_id<-function(air_id){
     #MASE=sum(abs(scale(error)))/pred_len
     #message("MSE:",MSE," RMSE:",RMSE," MAE:",MAE," MASE:",MASE)
   
-  #Using the fitted ARIMA model we will forecast for our “prediction length”. 
+  #Using the fitted ARIMA model we will forecast for our "prediction length". 
   #We include confidence intervals.
   arima_visits<-arima.fit %>%
     forecast(h=pred_len,level=c(50,95))
@@ -1067,15 +1075,15 @@ plot_auto_arima_air_id("air_399904bdb7685ca0")
 # (i) a (piecewise) linear/logistic trend, 
 # (ii) a yearly seasonal component, 
 # (iii) a weekly seasonal component, and 
-# (iv) an optional list of important days (such as holidays, special events, …). 
-# It claims to be “robust to missing data, shifts in the trend, and large outliers”. 
+# (iv) an optional list of important days (such as holidays, special events, .). 
+# It claims to be "robust to missing data, shifts in the trend, and large outliers". 
 # Especially the missing data functionality could be useful in this competition.
 # 
-# Let’s again explore the tool step by step. We will build on our work in the ARIMA 
-# section and won’t repeat any explanations that can be found there.
+# Let's again explore the tool step by step. We will build on our work in the ARIMA 
+# section and won't repeat any explanations that can be found there.
 
 # We will again create a training and validation set for the same periods as above
-# We don’t need to replace NA values because prophet knows how to handle those.
+# We don't need to replace NA values because prophet knows how to handle those.
 # Prophet expects a data frame with two columns: ds for the dates and y for 
 # the time series variable.
 
@@ -1114,7 +1122,7 @@ visits_valid <- visits %>% filter(ds > split_date)
 # Increasing this parameter makes the fit more flexible, but also increases the 
 # forecast uncertainties and makes it more likely to overfit to noise. 
 # The changepoints in the data are automatically detected unless being specified 
-# by hand using the changepoints argument (which we don’t do here).
+# by hand using the changepoints argument (which we don't do here).
 # 
 # the parameter yearly.seasonality has to be enabled/disabled explicitely and 
 # allows prophet to notice large-scale cycles. We have barely a year of data here, 
@@ -1411,8 +1419,8 @@ compare_arima_hw_Prophet("air_c8fe396d6c46275d")
 
 
 
-#===================== PROPHET FINAL FUNCTION FOR TEST  =============================
-#Preparing Final Function on Prophet for Submission
+#===================== PROPHET FUNCTION FOR TEST  =============================
+#Preparing Function on Prophet on test dataset
 plot_prophet_air_id_holiday_final <- function(air_id, use_hday){
   
   
@@ -1498,16 +1506,97 @@ grid.arrange(p1,p2,p3,nrow=3)
 
 
 #================ 7. Forecasting for test data ====================================
+#================ FINAL SUBMISSION ================================================
+test$id<-as.factor(test$id) 
+print(nlevels(test$id))
+
+test<-test %>% arrange(id)
+
+
 test_visit<-test %>%
   separate(id,c("air","store_id","date"),sep="_") %>%
-  mutate(air_store_id=str_c(air,store_id,sep="_")) %>%
-  group_by(air_store_id) %>%
-  count()
+  mutate(air_store_id=str_c(air,store_id,sep="_"))
 
-for (i in 1:length(test_visit)) {
-  x<-as.character(test_visit[i,1])
-  print(x)
-  plot(plot_prophet_air_id_holiday_final(x,TRUE))
+#convering storeid into factors
+test_visit$air_store_id<-as.factor(test_visit$air_store_id)
+
+print(nlevels(test_visit$air_store_id))
+
+print(nlevels(air_visits$air_store_id))
+#creating train dataset from airVisits which consist only ids which are present in test
+train<-air_visits[air_visits$air_store_id %in% test_visit$air_store_id,] %>%
+  droplevels()
+print(nlevels(train$air_store_id))
+
+
+#Subset the total train dataset into multiple subset based on Item_id
+df_list <- split(train, as.factor(train$air_store_id))
+
+length(df_list)
+nrow(test_visit)
+
+
+#Implement the Prophet Model on the each dataset
+results <- list()
+
+#Prophet model 
+for(i in 1:length(df_list)) {
+  a <- as.data.frame(df_list[i])
+  #Creating dataset for Holiday only
+  hday <- holidays %>%
+    filter(holiday_flg == TRUE) %>%
+    mutate(ds=calendar_date,holiday = "holiday")
+  
+  hday<-hday[c(4:5)]
+  
+  #length for prediction
+  pred_len <- test %>%
+    separate(id, c("air", "store_id", "date"), sep = "_") %>%
+    distinct(date) %>%
+    nrow()
+  
+  #Create dummy dataset without any gap
+  max_date <- max(as.Date(air_visits$visit_date))
+  min_date <- min(as.Date(air_visits$visit_date))
+  
+  all_visits <- tibble(visit_date = seq(min_date, max_date, 1))
+  
+  #Extracting required store id
+  foo <- a
+  colnames(foo)<-c("air_store_id","visit_date","visitors")
+  foo$visit_date<-as.Date(foo$visit_date)
+  ##Create dataset without any gap
+  visits <- foo %>%
+    right_join(all_visits, by = "visit_date") %>%
+    mutate(y = log1p(visitors),ds = visit_date)
+  
+  visits<-visits[c(4:5)]
+  
+  #Prophet Fit 
+  
+  proph <- prophet(visits,
+                    changepoint.prior.scale=0.5,
+                    yearly.seasonality=FALSE,
+                    holidays = hday)
+  
+  #Forecasting
+  future <- make_future_dataframe(proph, periods = pred_len)
+  fcast <- predict(proph, future)
+  #Obtaining result from fcast which is stored in yhat
+  #removed 1:478 because they are train data rest 39 are predicted
+  results[[levels(train$air_store_id)[i]]] <- fcast$yhat[-c(1:478)]
+}
+#Convert output the required format
+log_visitor <-NULL
+
+for(i in 1:length(results)){
+  b <- as.data.frame(results[i]) 
+  log_visitor <- append(log_visitor,b[,1])
 }
 
+output <- data.frame(air_store_id=test$id,log_visitor)
+#Convert log1p() value into antilog by exp1m()
+output<-output %>% 
+  mutate(visitor = round(expm1(log_visitor),0)) %>%
+  select(air_store_id,visitor)
 #====================== END of Project =========================================
